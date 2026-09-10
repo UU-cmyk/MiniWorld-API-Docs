@@ -155,7 +155,7 @@ MiniWorld-API-Desc/
 │   ├── .vscodeignore        # publish ignore rules
 │   ├── .vscode-test.mjs     # VS Code test config
 │   └── README.md            # extension-specific documentation
-├── multiple/                 # versioned Lua declaration source files
+├── declarations/             # versioned Lua declaration source files
 │   ├── 2.0/
 │   └── 3.0/
 ├── tools/                    # Python tooling and shared logic
@@ -186,7 +186,7 @@ MiniWorld-API-Desc/
 ### Structure Principles
 
 - `addon/` contains only VS Code extension logic, not declaration source files.
-- `multiple/` keeps generated declaration sources split by version and module for easier reviews and merges.
+- `declarations/` keeps declaration sources split by version and module for easier reviews and merges.
 - `tools/` groups all automation in one place, avoiding scattered version-specific scripts.
 - `server/` handles worker-side functionality separately from the local VS Code extension.
 - `out/` is reserved for generated files and artifacts only.
@@ -216,7 +216,7 @@ Run the following commands from the repo root (requires Python 3.12+, see `pypro
 | Compile only | `python tools/pack.py --compile-only` | Run compile only |
 | Clean output | `python tools/pack.py --clean` | Remove generated build artifacts |
 | Worker build | `npm run build:worker` | Build the Cloudflare Worker |
-| Extension build | `npm run compile` | Compile the TypeScript extension |
+| Extension build | `cd addon; npm run compile` | Compile the TypeScript extension |
 
 ### Notes
 

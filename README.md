@@ -155,7 +155,7 @@ MiniWorld-API-Desc/
 │   ├── .vscodeignore        # 扩展发布忽略规则
 │   ├── .vscode-test.mjs     # VS Code 测试配置
 │   └── README.md            # 扩展说明
-├── multiple/                 # 按版本拆分的 Lua 声明源文件
+├── declarations/             # 按版本拆分的 Lua 声明源文件
 │   ├── 2.0/
 │   └── 3.0/
 ├── tools/                    # Python 工具脚本与通用逻辑
@@ -186,7 +186,7 @@ MiniWorld-API-Desc/
 ### 结构原则
 
 - `addon/` 只保留 VS Code 侧扩展实现，不直接承载声明源数据。
-- `multiple/` 作为声明源目录，按版本和模块拆分，便于维护和合并。
+- `declarations/` 作为声明源目录，按版本和模块拆分，便于维护和合并。
 - `tools/` 统一放置脚本入口、公共逻辑和生成任务，避免多个版本目录散落重复脚本。
 - `server/` 负责 API 代理和云端能力，和本地扩展职责分离。
 - `out/` 仅用于生成产物，不作为源代码目录。
@@ -216,7 +216,7 @@ MiniWorld-API-Desc/
 | 编译仅 | `python tools/pack.py --compile-only` | 仅执行编译，不打包 |
 | 清理输出 | `python tools/pack.py --clean` | 删除编译产物 |
 | Worker 构建 | `npm run build:worker` | 构建 Cloudflare Worker |
-| 扩展编译 | `npm run compile` | 编译 TypeScript 扩展 |
+| 扩展编译 | `cd addon; npm run compile` | 编译 TypeScript 扩展 |
 
 ### 说明
 

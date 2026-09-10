@@ -1,14 +1,9 @@
-# 源码
-complete/src/
-complete/test/
-complete/out/test/
-
 # 构建配置
-**/tsconfig.json
-**/eslint.config.mjs
 **/*.map
 **/*.ts
-pack.ps1
+tsconfig.json
+eslint.config.mjs
+.vscode-test.mjs
 
 # 版本控制
 .git/
@@ -26,21 +21,15 @@ node_modules/
 pyproject.toml
 uv.lock
 
-# 文档
-/*.md
-complete/*.md
+# 文档与开发配置
 docs/
-addon/README.md
-README.md.bak
-README.en.md
+tools/
+server/
+config.ini
+config.example.ini
 
 # 其他
 .yarnrc
 *.vsix
 __pycache__/
-tools/
-out/
-server/
 .github/
-config.ini
-config.example.ini

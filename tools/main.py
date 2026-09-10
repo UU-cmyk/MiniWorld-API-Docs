@@ -204,7 +204,7 @@ def run_compare(
 
 
 def run_merge_cmd(version: str) -> int:
-    """合并 multiple 目录下的声明文件"""
+    """合并 declarations 目录下的声明文件"""
     print_section_header(f"合并 {version} 声明文件")
     result: MergeResult = run_merge(version)
     _format_merge_result(result)
@@ -339,7 +339,7 @@ def merge(
         help="API 版本（2.0/3.0）",
     ),
 ) -> None:
-    """合并 multiple 目录下的声明文件"""
+    """合并 declarations 目录下的声明文件"""
     validate_choice(version, VERSIONS, "版本")
     raise typer.Exit(run_merge_cmd(version))
 

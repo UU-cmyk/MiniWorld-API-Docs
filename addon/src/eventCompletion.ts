@@ -5,8 +5,8 @@ import * as vscode from 'vscode';
 import { COMPLETION_MODE_SETTING, getCompletionMode, type CompletionMode } from './completionMode';
 
 /** 事件定义文件 */
-const EVENT_DEFINITIONS_FILE_20 = path.join('addon', 'types', '2.0', 'MNEvent.d.json');
-const EVENT_DEFINITIONS_FILE_30 = path.join('addon', 'types', '3.0', 'MNEvent.d.json');
+const EVENT_DEFINITIONS_FILE_20 = path.join('declarations', '2.0', 'MNEvent.d.json');
+const EVENT_DEFINITIONS_FILE_30 = path.join('declarations', '3.0', 'MNEvent.d.json');
 
 /** 3.0 模式支持的事件枚举类 */
 const EVENT_CLASSES_30 = ['TriggerEvent', 'ObjectEvent'] as const;
@@ -26,7 +26,8 @@ let loadSeq = 0;
 
 function getEventDefinitionsFile(context: vscode.ExtensionContext, mode: '2.0' | '3.0'): string {
     const rel = mode === '3.0' ? EVENT_DEFINITIONS_FILE_30 : EVENT_DEFINITIONS_FILE_20;
-    return context.asAbsolutePath(rel);
+    const bundledFile = path.resolve(context.extensionPath, rel);
+    return fs.existsSync(bundledFile) ? bundledFile : path.resolve(context.extensionPath, '..', rel);
 }
 
 /** 获取（必要时构建）2.0 模式的补全缓存 */

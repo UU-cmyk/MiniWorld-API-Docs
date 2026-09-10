@@ -1,4 +1,4 @@
-"""合并 multiple 目录下的 .d.lua 文件为单个声明文件"""
+"""合并 declarations 目录下的 .d.lua 文件为单个声明文件"""
 
 import os
 

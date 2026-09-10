@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -7,11 +8,15 @@ const LUA_CONFIG_SECTION = 'Lua';
 const LIBRARY_KEY = 'workspace.library';
 
 function getTypesDir20(context: vscode.ExtensionContext): string {
-    return context.asAbsolutePath(path.join('addon', 'types', '2.0'));
+    const siblingDir = path.resolve(context.extensionPath, '..', 'declarations', '2.0');
+    const bundledDir = path.resolve(context.extensionPath, 'declarations', '2.0');
+    return fs.existsSync(bundledDir) ? bundledDir : siblingDir;
 }
 
 function getTypesDir30(context: vscode.ExtensionContext): string {
-    return context.asAbsolutePath(path.join('addon', 'types', '3.0'));
+    const siblingDir = path.resolve(context.extensionPath, '..', 'declarations', '3.0');
+    const bundledDir = path.resolve(context.extensionPath, 'declarations', '3.0');
+    return fs.existsSync(bundledDir) ? bundledDir : siblingDir;
 }
 
 /** 规范化路径（解析相对路径、统一大小写），用于比较路径是否相同 */

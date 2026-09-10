@@ -629,6 +629,11 @@ export class ApiSearchProvider implements vscode.WebviewViewProvider, vscode.Dis
 
     private readonly _disposables: vscode.Disposable[] = [];
 
+    private _declarationsDir(): string {
+        const bundledDir = path.resolve(this._context.extensionPath, 'declarations');
+        return fs.existsSync(bundledDir) ? bundledDir : path.resolve(this._context.extensionPath, '..', 'declarations');
+    }
+
     constructor(
         private readonly _extensionUri: vscode.Uri,
         context: vscode.ExtensionContext,
@@ -640,7 +645,7 @@ export class ApiSearchProvider implements vscode.WebviewViewProvider, vscode.Dis
     /** 异步初始化，加载并解析所有 API 数据 */
     public async init(): Promise<void> {
         if (this._initialized) { return; }
-        const multipleDir = this._context.asAbsolutePath(path.join('multiple'));
+        const multipleDir = this._declarationsDir();
         try {
             this._allItems = await scanAllApis(multipleDir);
             this._typeRefMap = buildTypeRefMap(this._allItems);
@@ -675,7 +680,7 @@ export class ApiSearchProvider implements vscode.WebviewViewProvider, vscode.Dis
 
     /** 刷新数据（用于重新加载） */
     public async refresh(): Promise<void> {
-        const baseDir = this._context.asAbsolutePath(path.join('multiple'));
+        const baseDir = this._declarationsDir();
         try {
             await fs.promises.access(baseDir);
             this._allItems = await scanAllApis(baseDir);
@@ -834,8 +839,8 @@ export class ApiSearchProvider implements vscode.WebviewViewProvider, vscode.Dis
             enableScripts: true,
             localResourceRoots: [
                 vscode.Uri.joinPath(this._extensionUri, 'node_modules'),
-                vscode.Uri.joinPath(this._extensionUri, 'multiple'),
-                vscode.Uri.joinPath(this._extensionUri, 'addon', 'webview'),
+                vscode.Uri.file(this._declarationsDir()),
+                vscode.Uri.joinPath(this._extensionUri, 'webview'),
             ],
         };
 
@@ -1204,8 +1209,8 @@ export class ApiSearchProvider implements vscode.WebviewViewProvider, vscode.Dis
             return ApiSearchProvider._assetCache;
         }
 
-        const webviewDir = vscode.Uri.joinPath(extensionUri, 'addon', 'webview');
-        const iconDir = path.join(extensionUri.fsPath, 'addon', 'webview', 'assets', 'img');
+        const webviewDir = vscode.Uri.joinPath(extensionUri, 'webview');
+        const iconDir = path.join(extensionUri.fsPath, 'webview', 'assets', 'img');
         const markedPath = path.join(extensionUri.fsPath, 'node_modules', 'marked', 'lib', 'marked.umd.js');
         const htmlPath = vscode.Uri.joinPath(webviewDir, 'search.html');
 
@@ -1241,7 +1246,7 @@ export class ApiSearchProvider implements vscode.WebviewViewProvider, vscode.Dis
 
     private async _getHtmlContent(webview: vscode.Webview): Promise<string> {
         const nonce = this._getNonce();
-        const webviewDir = vscode.Uri.joinPath(this._extensionUri, 'addon', 'webview');
+        const webviewDir = vscode.Uri.joinPath(this._extensionUri, 'webview');
         const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'style.css'));
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'script.js'));
 

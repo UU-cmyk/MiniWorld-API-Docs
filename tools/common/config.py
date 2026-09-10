@@ -18,9 +18,10 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent
 TOOLS_DIR: Path = PROJECT_ROOT / "tools"
 OUT_DIR: Path = PROJECT_ROOT / "out"
 
-# multiple 声明目录
-MULTIPLE_20_DIR: Path = PROJECT_ROOT / "multiple" / "2.0"
-MULTIPLE_30_DIR: Path = PROJECT_ROOT / "multiple" / "3.0"
+# 声明目录
+DECLARATIONS_DIR: Path = PROJECT_ROOT / "declarations"
+MULTIPLE_20_DIR: Path = DECLARATIONS_DIR / "2.0"
+MULTIPLE_30_DIR: Path = DECLARATIONS_DIR / "3.0"
 
 # docs 输出目录
 DOCS_20_DIR: Path = PROJECT_ROOT / "docs" / "miniworld-ugc-20" / "references"

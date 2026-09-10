@@ -132,7 +132,7 @@ def main(
         return 0
 
     if not skip_install:
-        _run_command(["npm", "install"], project_root, "安装/更新 npm 依赖")
+        _run_command(["npm", "install"], addon_dir, "安装/更新扩展 npm 依赖")
         _print_success("npm 依赖安装完成")
     else:
         _print_warning("跳过 npm install")
@@ -143,11 +143,11 @@ def main(
     else:
         _print_warning("跳过清理步骤")
 
-    _run_command(["npm", "run", "compile"], project_root, "使用 esbuild 编译 TypeScript")
+    _run_command(["npm", "run", "compile"], addon_dir, "使用 esbuild 编译 TypeScript")
     _print_success(f"esbuild 编译完成 → {out_dir / 'extension.js'}（单文件打包，含 sourcemap）")
 
     if not skip_lint:
-        _run_command(["npm", "run", "lint"], project_root, "运行 ESLint")
+        _run_command(["npm", "run", "lint"], addon_dir, "运行 ESLint")
         _print_success("ESLint 检查通过")
     else:
         _print_warning("跳过 ESLint")
@@ -162,28 +162,20 @@ def main(
     _print_step("打包 VS Code 扩展...")
     _ensure_vsce()
 
-    addon_readme = addon_dir / "README.md"
-    root_readme = project_root / "README.md"
-    root_readme_backup = project_root / "README.md.bak"
-
-    had_backup = False
-    if root_readme.exists():
-        shutil.copy2(root_readme, root_readme_backup)
-        had_backup = True
-        _print_step("已备份根目录 README.md → README.md.bak")
-
-    if addon_readme.exists():
-        shutil.copy2(addon_readme, root_readme)
-        _print_step("已使用 addon/README.md 替换根目录 README.md")
-
     output_vsix = project_root / "miniworld-api-desc-addon.vsix"
+    addon_declarations = addon_dir / "declarations"
+    source_declarations = project_root / "declarations"
+    if addon_declarations.exists():
+        shutil.rmtree(addon_declarations)
+    shutil.copytree(source_declarations, addon_declarations)
+    _print_step("已将 declarations/ 临时加入扩展打包目录")
     try:
-        _run_command(["vsce", "package", "--out", str(output_vsix)], project_root, "打包 VS Code 扩展")
+        _run_command(["vsce", "package", "--out", str(output_vsix)], addon_dir, "打包 VS Code 扩展")
         _print_success(f"打包完成！输出: {output_vsix}")
     finally:
-        if had_backup and root_readme.exists() and root_readme_backup.exists():
-            shutil.move(str(root_readme_backup), str(root_readme))
-            _print_step("已恢复根目录 README.md")
+        if addon_declarations.exists():
+            shutil.rmtree(addon_declarations)
+            _print_step("已移除打包临时声明目录")
 
     summary = Table(title="打包结果", style="cyan")
     summary.add_column("项目", style="bold")

@@ -4,7 +4,6 @@
   "displayName": "MiniWorld API Description",
   "description": "MiniWorld API Description",
   "version": "0.7.0",
-  "icon": "img/Logo-128px.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/UU-cmyk/MiniWorld-API-Desc.git"
@@ -18,7 +17,7 @@
   "activationEvents": [
     "onLanguage:lua"
   ],
-  "main": "./addon/out/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "title": "MiniWorld API Description",
@@ -88,11 +87,11 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "esbuild addon/src/extension.ts --bundle --outfile=addon/out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --sourcemap",
-    "watch": "esbuild addon/src/extension.ts --bundle --outfile=addon/out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --sourcemap --watch",
+    "compile": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --sourcemap",
+    "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node --target=node20 --sourcemap --watch",
     "typecheck": "tsc --noEmit",
     "pretest": "npm run compile && npm run lint",
-    "lint": "eslint addon/src",
+    "lint": "eslint src",
     "test": "vscode-test",
     "install:worker": "cd server && npm install",
     "build:worker": "cd server && npm run build",
