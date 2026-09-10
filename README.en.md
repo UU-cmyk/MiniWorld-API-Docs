@@ -142,47 +142,87 @@ Press `Ctrl+K` in the search input box to quickly clear search content.
 
 ## Project Structure
 
+The repository is organized into separate layers for extension code, declaration sources, tooling, and worker services, which keeps the project easier to maintain and extend:
+
 ```bash
 MiniWorld-API-Desc/
-├── package.json  # VS Code extension manifest
-├── tsconfig.json  # TypeScript compilation configuration
-├── eslint.config.mjs  # ESLint configuration
-├── pack.ps1  # Build and packaging script
-├── .vscodeignore  # Extension publishing ignore rules
-├── addon/  # VS Code extension source code
-├── multiple/  # Declaration files split by module
-├── docs/  # Project documentation
-├── tools/  # Python tool scripts
-└── img/  # Image resources
+├── addon/                    # VS Code extension source and extension environment
+│   ├── src/                 # TypeScript entry points and logic
+│   ├── out/                 # build artifacts (generated)
+│   ├── package.json         # extension manifest / npm scripts
+│   ├── tsconfig.json        # TypeScript config
+│   ├── eslint.config.mjs    # ESLint config
+│   ├── .vscodeignore        # publish ignore rules
+│   ├── .vscode-test.mjs     # VS Code test config
+│   └── README.md            # extension-specific documentation
+├── multiple/                 # versioned Lua declaration source files
+│   ├── 2.0/
+│   └── 3.0/
+├── tools/                    # Python tooling and shared logic
+│   ├── common/              # reusable parsing, compare, and merge logic
+│   ├── main.py              # unified CLI entry point
+│   ├── pack.py              # VSIX packaging script
+│   ├── out.py               # output packaging tool
+│   └── README.md            # tool usage notes
+├── server/                   # Cloudflare Worker / API proxy
+│   ├── src/
+│   └── test/
+├── docs/                     # API references and docs
+├── img/                      # icons and assets
+├── out/                      # generated reports and packaged artifacts
+├── .github/                  # GitHub settings
+├── .vscode/                  # local editor configuration
+├── config.ini                # local configuration
+├── config.example.ini        # config template
+├── pyproject.toml            # Python dependency config
+├── README.md                 # Chinese documentation
+├── README.en.md              # English documentation
+├── LICENSE                   # license
+├── uv.lock                   # Python lockfile
+├── package-lock.json         # root lockfile if workspace installs are used
+└── node_modules/             # local dependencies (generated as needed)
 ```
+
+### Structure Principles
+
+- `addon/` contains only VS Code extension logic, not declaration source files.
+- `multiple/` keeps generated declaration sources split by version and module for easier reviews and merges.
+- `tools/` groups all automation in one place, avoiding scattered version-specific scripts.
+- `server/` handles worker-side functionality separately from the local VS Code extension.
+- `out/` is reserved for generated files and artifacts only.
 
 ## Tool Scripts
 
-Run the following commands in the repository root directory (requires Python 3.12+, dependencies in `pyproject.toml`):
+Run the following commands from the repo root (requires Python 3.12+, see `pyproject.toml`):
 
-### Declaration Management
-
-| Category | Command | Description |
-| :-: | :-- | :-: |
-| Declaration Merge | `python tools/3.0/Merge.py` | Merge multiple/3.0/ into merged.3.0.lua |
-| Declaration Merge | `python tools/2.0/Merge.py` | Merge multiple/2.0/ into merged.2.0.lua |
-
-### API Comparison
+### Unified CLI
 
 | Category | Command | Description |
 | :-: | :-- | :-: |
-| 3.0 Function Comparison | `python tools/3.0/FuncCompare.py` | Compare 3.0 version function differences |
-| 3.0 Event Comparison | `python tools/3.0/EventCompare.py` | Compare 3.0 version event differences |
-| 3.0 Enum Comparison | `python tools/3.0/EnumLibCompare.py` | Compare 3.0 version enum differences |
-| 2.0 Function Comparison | `python tools/2.0/FuncCompare.py` | Compare 2.0 version function differences |
-| 2.0 Event Comparison | `python tools/2.0/EventCompare.py` | Compare 2.0 version event differences |
+| List all commands | `python tools/main.py list` | Show supported actions |
+| Compare functions | `python tools/main.py compare func --version 2.0` | Compare 2.0 function differences |
+| Compare events | `python tools/main.py compare event --version 3.0` | Compare 3.0 event differences |
+| Compare enums | `python tools/main.py compare enum --version 3.0` | Compare 3.0 enum differences |
+| Full comparison | `python tools/main.py compare all` | Run all comparison types |
+| Merge declarations | `python tools/main.py merge --version 3.0` | Merge 3.0 source declarations |
+| Generate AI text | `python tools/main.py desc --version 3.0` | Generate AI-friendly description docs |
+| Save results to file | `python tools/main.py compare all --output out/report.txt` | Write comparison results to a file |
 
-### AI Tools
+### Build and Packaging
 
 | Category | Command | Description |
 | :-: | :-- | :-: |
-| AI Description Generation | `python tools/3.0/DescToAiDesc.py` | Generate AiDesc/3.0/MNAiDesc.txt |
-| AI Description Generation | `python tools/2.0/DescToAiDesc.py` | Generate AiDesc/2.0/MNAiDesc.txt |
+| Package extension | `python tools/pack.py` | Compile + lint + package VSIX |
+| Compile only | `python tools/pack.py --compile-only` | Run compile only |
+| Clean output | `python tools/pack.py --clean` | Remove generated build artifacts |
+| Worker build | `npm run build:worker` | Build the Cloudflare Worker |
+| Extension build | `npm run compile` | Compile the TypeScript extension |
+
+### Notes
+
+- The unified entry point is `tools/main.py`, and shared logic lives under `tools/common/`.
+- Older version-specific scripts like `tools/3.0` and `tools/2.0` have been consolidated into a single CLI to reduce duplication.
+- Exported build artifacts can be assembled with `python tools/out.py` when you want a single packaging workflow.
 
 ## AI Usage Recommendations
 
@@ -223,7 +263,7 @@ After packaging, a `.vsix` file will be generated in the root directory, which c
 
 | Project | Version |
 | :-- | :-: |
-| MiniWorld Game | v1.56+ |
+| MiniWorld Game | v1.58+ |
 | UGC Development Kit | 3.0 & 2.0 |
 | Python | 3.10+ |
 | VS Code | ^1.125.0 |
@@ -260,21 +300,6 @@ Welcome to contribute code or submit issues to this project!
 - Use [GitHub Issues](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues) to report bugs
 - Provide detailed reproduction steps and error information
 - Attach relevant code snippets and logs
-
-### Submitting Pull Requests
-
-1. Fork this repository
-2. Create feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Create Pull Request
-
-### Code Standards
-
-- Follow the project's ESLint configuration
-- Maintain consistent code style
-- Add appropriate comments and documentation
-- Ensure tests pass (if any)
 
 ## License
 

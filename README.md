@@ -142,47 +142,87 @@ v0.6.1 新增了 **API 搜索面板**，支持在 VS Code 侧边栏中快速检�
 
 ## 项目结构
 
+当前仓库采用“扩展源码 + 声明源数据 + 工具链 + 运行时服务”的分层结构，便于维护声明、构建扩展和部署 Worker：
+
 ```bash
 MiniWorld-API-Desc/
-├── package.json  # VS Code 扩展清单
-├── tsconfig.json  # TypeScript 编译配置
-├── eslint.config.mjs  # ESLint 配置
-├── pack.ps1  # 编译打包脚本
-├── .vscodeignore  # 扩展发布忽略规则
-├── addon/  # VS Code 扩展源码
-├── multiple/  # 按模块拆分的声明文件
-├── docs/  # 项目文档
-├── tools/  # Python 工具脚本
-└── img/  # 图片资源
+├── addon/                    # VS Code 扩展源码与扩展环境
+│   ├── src/                 # TypeScript 入口和功能实现
+│   ├── out/                 # 编译输出（生成）
+│   ├── package.json         # 扩展清单 / npm 脚本
+│   ├── tsconfig.json        # TypeScript 编译配置
+│   ├── eslint.config.mjs    # ESLint 配置
+│   ├── .vscodeignore        # 扩展发布忽略规则
+│   ├── .vscode-test.mjs     # VS Code 测试配置
+│   └── README.md            # 扩展说明
+├── multiple/                 # 按版本拆分的 Lua 声明源文件
+│   ├── 2.0/
+│   └── 3.0/
+├── tools/                    # Python 工具脚本与通用逻辑
+│   ├── common/              # 公共解析、比较、合并逻辑
+│   ├── main.py              # 统一 CLI 入口
+│   ├── pack.py              # 扩展打包脚本
+│   ├── out.py               # 输出打包脚本
+│   └── README.md            # 工具说明（可选）
+├── server/                   # Cloudflare Worker / API 代理
+│   ├── src/
+│   └── test/
+├── docs/                     # 参考文档、API 说明与知识资料
+├── img/                      # 图标和图片资源
+├── out/                      # 生成的分析结果、压缩包等输出
+├── .github/                  # GitHub 配置
+├── .vscode/                  # 本地 VS Code 配置
+├── config.ini                # 本地配置
+├── config.example.ini        # 配置示例
+├── pyproject.toml            # Python 工具依赖
+├── README.md                 # 中文文档
+├── README.en.md              # 英文文档
+├── LICENSE                   # 许可证
+├── uv.lock                   # Python 依赖锁定文件
+├── package-lock.json         # 根级锁文件（如使用根工作区安装）
+└── node_modules/             # 本地依赖（按需生成）
 ```
+
+### 结构原则
+
+- `addon/` 只保留 VS Code 侧扩展实现，不直接承载声明源数据。
+- `multiple/` 作为声明源目录，按版本和模块拆分，便于维护和合并。
+- `tools/` 统一放置脚本入口、公共逻辑和生成任务，避免多个版本目录散落重复脚本。
+- `server/` 负责 API 代理和云端能力，和本地扩展职责分离。
+- `out/` 仅用于生成产物，不作为源代码目录。
 
 ## 工具脚本
 
 在仓库根目录运行以下命令（需 Python 3.12+，依赖见 `pyproject.toml`）：
 
-### 声明管理
+### 统一命令入口
 
 | 类别 | 命令 | 说明 |
 | :-: | :-- | :-: |
-| 声明合并 | `python tools/3.0/Merge.py` | 合并 multiple/3.0/ 为 merged.3.0.lua |
-| 声明合并 | `python tools/2.0/Merge.py` | 合并 multiple/2.0/ 为 merged.2.0.lua |
+| 查看全部命令 | `python tools/main.py list` | 列出工具支持的所有操作 |
+| 对比函数 | `python tools/main.py compare func --version 2.0` | 对比 2.0 函数差异 |
+| 对比事件 | `python tools/main.py compare event --version 3.0` | 对比 3.0 事件差异 |
+| 对比枚举 | `python tools/main.py compare enum --version 3.0` | 对比 3.0 枚举差异 |
+| 全量对比 | `python tools/main.py compare all` | 同时运行全部对比类型 |
+| 合并声明 | `python tools/main.py merge --version 3.0` | 合并 3.0 声明源 |
+| 生成 AI 文本 | `python tools/main.py desc --version 3.0` | 生成 AI 可用描述文档 |
+| 导出报告 | `python tools/main.py compare all --output out/report.txt` | 将比较结果写入文件 |
 
-### API 对比
-
-| 类别 | 命令 | 说明 |
-| :-: | :-- | :-: |
-| 3.0 函数对比 | `python tools/3.0/FuncCompare.py` | 对比 3.0 版本函数差异 |
-| 3.0 事件对比 | `python tools/3.0/EventCompare.py` | 对比 3.0 版本事件差异 |
-| 3.0 枚举对比 | `python tools/3.0/EnumLibCompare.py` | 对比 3.0 版本枚举差异 |
-| 2.0 函数对比 | `python tools/2.0/FuncCompare.py` | 对比 2.0 版本函数差异 |
-| 2.0 事件对比 | `python tools/2.0/EventCompare.py` | 对比 2.0 版本事件差异 |
-
-### AI 工具
+### 打包与构建
 
 | 类别 | 命令 | 说明 |
 | :-: | :-- | :-: |
-| AI 描述生成 | `python tools/3.0/DescToAiDesc.py` | 生成 AiDesc/3.0/MNAiDesc.txt |
-| AI 描述生成 | `python tools/2.0/DescToAiDesc.py` | 生成 AiDesc/2.0/MNAiDesc.txt |
+| 打包扩展 | `python tools/pack.py` | 编译 + lint + 打包 VSIX |
+| 编译仅 | `python tools/pack.py --compile-only` | 仅执行编译，不打包 |
+| 清理输出 | `python tools/pack.py --clean` | 删除编译产物 |
+| Worker 构建 | `npm run build:worker` | 构建 Cloudflare Worker |
+| 扩展编译 | `npm run compile` | 编译 TypeScript 扩展 |
+
+### 说明
+
+- 统一入口在 `tools/main.py`，相关逻辑统一放在 `tools/common/` 中，便于扩展新版本和新分析任务。
+- 旧版目录结构中的 `tools/3.0`、`tools/2.0` 形式已被归并到统一工具入口，避免脚本分散。
+- 若需要产出最终可交付包，可使用 `python tools/out.py` 集中生成导出文件和 VSIX。
 
 ## AI 使用建议
 
@@ -223,7 +263,7 @@ code --install-extension MiniWorld-API-Desc.vsix # 4. 安装扩展（可选）
 
 | 项目 | 版本 |
 | :-- | :-: |
-| 《迷你世界》游戏 | v1.56+ |
+| 《迷你世界》游戏 | v1.58+ |
 | UGC 开发套件 | 3.0 & 2.0 |
 | Python | 3.10+ |
 | VS Code | ^1.125.0 |
@@ -260,21 +300,6 @@ code --install-extension MiniWorld-API-Desc.vsix # 4. 安装扩展（可选）
 - 使用 [GitHub Issues](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues) 报告 bug
 - 提供详细的复现步骤和错误信息
 - 附上相关的代码片段和日志
-
-### 提交 Pull Request
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-### 代码规范
-
-- 遵循项目的 ESLint 配置
-- 保持代码风格一致
-- 添加适当的注释和文档
-- 确保测试通过（如果有）
 
 ## 许可协议
 
