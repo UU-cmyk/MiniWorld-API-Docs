@@ -93,10 +93,10 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
-    "install:worker": "cd server && npm install",
-    "build:worker": "cd server && npm run build",
-    "deploy:worker": "cd server && wrangler deploy",
-    "dev:worker": "cd server && wrangler dev"
+    "install:worker": "cd ../server && npm install",
+    "build:worker": "cd ../server && npm run build",
+    "deploy:worker": "cd ../server && wrangler deploy",
+    "dev:worker": "cd ../server && wrangler dev"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

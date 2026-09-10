@@ -5,7 +5,7 @@ import * as path from 'path';
 
 import * as vscode from 'vscode';
 
-import { buildClassCompletionItems, buildEventCompletionItems, parseEventDefinitions } from '../eventCompletion';
+import { buildClassCompletionItems, buildEventCompletionItems, parseEventDefinitions, parseLuaEventDefinitions } from '../eventCompletion';
 
 suite('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
@@ -36,6 +36,26 @@ suite('Extension Test Suite', () => {
 		// 2.0 补全项挂长括号包裹命令
 		assert.strictEqual(items[0].command?.command, 'complete.wrapEventBrackets');
 		assert.strictEqual(items[0].command?.arguments?.[0], 'Player.Die');
+	});
+
+	test('parses 3.0 event definitions from LuaDoc', async () => {
+		const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'miniworld-event-lua-'));
+		const filePath = path.join(tempDir, 'MNEvent.d.lua');
+		fs.writeFileSync(filePath, [
+			'--- @class TriggerEvent',
+			'--- @field GameStart any @游戏创建 {}',
+			'--- @field PlayerClickBlock any @点击方块 {blockid:方块类型, x,y,z:事件位置}',
+			'local TriggerEvent = {}',
+			'--- @class ObjectEvent',
+			'--- @field PlayerClickBlock any @组件点击',
+		].join('\n'));
+
+		const definitions = await parseLuaEventDefinitions(filePath);
+
+		assert.strictEqual(definitions.size, 3);
+		assert.strictEqual(definitions.get('TriggerEvent.GameStart')?.desc, '游戏创建');
+		assert.strictEqual(definitions.get('TriggerEvent.PlayerClickBlock')?.event_info?.x, '事件位置');
+		assert.strictEqual(definitions.get('ObjectEvent.PlayerClickBlock')?.desc, '组件点击');
 	});
 
 	test('builds 3.0 completion items filtered by event class', () => {

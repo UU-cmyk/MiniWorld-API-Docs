@@ -6,7 +6,7 @@ import { COMPLETION_MODE_SETTING, getCompletionMode, type CompletionMode } from 
 
 /** 事件定义文件 */
 const EVENT_DEFINITIONS_FILE_20 = path.join('declarations', '2.0', 'MNEvent.d.json');
-const EVENT_DEFINITIONS_FILE_30 = path.join('declarations', '3.0', 'MNEvent.d.json');
+const EVENT_DEFINITIONS_FILE_30 = path.join('declarations', '3.0', 'MNEvent.d.lua');
 
 /** 3.0 模式支持的事件枚举类 */
 const EVENT_CLASSES_30 = ['TriggerEvent', 'ObjectEvent'] as const;
@@ -54,6 +54,54 @@ export async function parseEventDefinitions(filePath: string): Promise<Map<strin
         const parsed = JSON.parse(raw) as Record<string, EventDefinition>;
 
         return new Map(Object.entries(parsed).sort(([left], [right]) => left.localeCompare(right)));
+    } catch (error) {
+        console.warn(`读取事件补全文件失败: ${filePath}`, error);
+        return new Map();
+    }
+}
+
+/** 解析 3.0 MNEvent.d.lua 中的 LuaDoc 事件定义。 */
+export async function parseLuaEventDefinitions(filePath: string): Promise<Map<string, EventDefinition>> {
+    try {
+        const raw = await fs.promises.readFile(filePath, 'utf8');
+        const definitions = new Map<string, EventDefinition>();
+        let currentClass: EventClass30 | null = null;
+
+        for (const line of raw.split(/\r?\n/)) {
+            const classMatch = /^---\s+@class\s+(TriggerEvent|ObjectEvent)\b/.exec(line);
+            if (classMatch) {
+                currentClass = classMatch[1] as EventClass30;
+                continue;
+            }
+
+            const fieldMatch = /^---\s+@field\s+(\w+)\s+\S+\s+@(.+?)(?:\s+\{(.*)\})?\s*$/.exec(line);
+            if (!currentClass || !fieldMatch) {
+                continue;
+            }
+
+            const [, fieldName, desc, rawParams] = fieldMatch;
+            const eventInfo: Record<string, string> = {};
+            if (rawParams) {
+                for (const part of rawParams.split(/,\s*(?=\w+(?:,\w+)*:)/)) {
+                    const separator = part.indexOf(':');
+                    if (separator === -1) {
+                        continue;
+                    }
+                    const names = part.slice(0, separator).split(',').map(name => name.trim()).filter(Boolean);
+                    const value = part.slice(separator + 1).trim();
+                    for (const name of names) {
+                        eventInfo[name] = value;
+                    }
+                }
+            }
+
+            definitions.set(`${currentClass}.${fieldName}`, {
+                desc: desc.trim(),
+                ...(Object.keys(eventInfo).length > 0 ? { event_info: eventInfo } : {}),
+            });
+        }
+
+        return new Map(Array.from(definitions.entries()).sort(([left], [right]) => left.localeCompare(right)));
     } catch (error) {
         console.warn(`读取事件补全文件失败: ${filePath}`, error);
         return new Map();
@@ -162,7 +210,8 @@ export function registerEventCompletion(context: vscode.ExtensionContext): vscod
         }
 
         const filePath = getEventDefinitionsFile(context, targetMode);
-        parseEventDefinitions(filePath).then(defs => {
+        const parse = targetMode === '3.0' ? parseLuaEventDefinitions : parseEventDefinitions;
+        parse(filePath).then(defs => {
             if (seq !== loadSeq) { return; }
             eventDefinitions = defs;
             if (targetMode === '3.0') {
