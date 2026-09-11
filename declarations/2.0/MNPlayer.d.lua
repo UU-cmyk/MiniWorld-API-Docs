@@ -3,6 +3,18 @@
 local Player = {}
 _G.Player = Player
 
+--- 打开一个UI界面
+--- @param objid number @玩家ID
+--- @param uiname string @自定义界面的UIID
+--- @return number @成功返回 ErrorCode.OK
+function Player:openUIView(objid, uiname) return 0 end
+
+--- 隐藏一个UI界面
+--- @param objid number @玩家ID
+--- @param uiname string @自定义界面的UIID
+--- @return number @成功返回 ErrorCode.OK
+function Player:hideUIView(objid, uiname) return 0 end
+
 --- 玩家属性获取
 --- @param objid number @玩家ID
 --- @param attrtype number @玩家属性枚举(PLAYERATTR)
