@@ -47,10 +47,10 @@ def func_analyze_web(url: str) -> set[str]:
     out_funcs: set[str] = set()
 
     for heading in soup.find_all(["h2", "h3", "h4"]):
-        text = heading.get_text(strip=True)
+        text: str = heading.get_text(strip=True)
         if not text:
             continue
-        text = re.sub(r"[\u200b\u200c\u200d\ufeff]+", "", text)
+        text: str = re.sub(r"[\u200b\u200c\u200d\ufeff]+", "", text)
         if not text:
             continue
         if re.fullmatch(r"[A-Za-z_]\w*", text) and text not in FUNC_TITLE_FILTER_30:
@@ -60,12 +60,12 @@ def func_analyze_web(url: str) -> set[str]:
     if not out_funcs:
         page_text = soup.get_text(separator="\n")
         for line in page_text.splitlines():
-            line = line.strip()
+            line: str = line.strip()
             if not line.startswith("|"):
                 continue
-            parts = [part.strip() for part in line.split("|")]
+            parts: list[str] = [part.strip() for part in line.split("|")]
             if len(parts) >= 3 and parts[1].isdigit():
-                func_part = re.sub(r"\(.*\)$", "", parts[2])
+                func_part: str = re.sub(r"\(.*\)$", "", parts[2])
                 if func_part:
                     out_funcs.add(func_part)
     return out_funcs
@@ -73,10 +73,8 @@ def func_analyze_web(url: str) -> set[str]:
 
 def func_module_name_from_url(url: str) -> str:
     """从文档 URL 推断模块名称
-
     Args:
         url: 文档 URL 的相对路径
-
     Returns:
         模块名称
     """
@@ -88,10 +86,8 @@ def func_module_name_from_url(url: str) -> str:
 
 def func_local_file_for_module(module_name: str) -> str:
     """从模块名生成本地声明文件路径
-
     Args:
         module_name: 模块名称
-
     Returns:
         本地声明文件路径
     """
@@ -106,12 +102,9 @@ ENUM_LIB_FILE_PATH: str = str(MULTIPLE_30_DIR / "MNEnumLib.d.lua")
 
 def enum_analyze_web(url: str) -> dict[str, list[str]]:
     """从 3.0 网页枚举页面提取枚举定义
-
-    表格格式要求 tabindex="0" 属性，且每行格式为 ClassName.FieldName。
-
+    表格格式要求 tabindex="0" 属性，且每行格式为 ClassName.FieldName
     Args:
         url: 网页 URL
-
     Returns:
         {类名: [字段名列表]}
     """
@@ -172,9 +165,7 @@ IGNORE_WEB_FIELDS: set[str] = IGNORE_EVENT_PARAMS
 
 def event_analyze_web(url: str) -> dict[str, list[str]]:
     """从指定 URL 的网页内容中提取事件定义
-
     在页面文本中查找 TriggerEvent/ObjectEvent/CurEventParam 的事件名
-
     Args:
         url: 网页 URL
     Returns:
@@ -182,13 +173,15 @@ def event_analyze_web(url: str) -> dict[str, list[str]]:
     """
     out_dict: dict[str, list[str]] = {}
     try:
-        response = requests.get(url, timeout=10)
+        response: requests.Response = requests.get(url, timeout=10)
         response.encoding = "utf-8"
-        text = response.text
+        text: str = response.text
     except Exception:
         return out_dict
 
-    pattern = re.compile(r"(TriggerEvent|ObjectEvent|CurEventParam)\.([A-Za-z0-9_]+)")
+    pattern: re.Pattern[str] = re.compile(
+        r"(TriggerEvent|ObjectEvent|CurEventParam)\.([A-Za-z0-9_]+)"
+    )
     matches = pattern.findall(text)
     if not matches:
         return out_dict
@@ -225,14 +218,14 @@ def compare_events(local: dict[str, list[str]], web: dict[str, list[str]]) -> li
             continue
         only_local: list[str] = sorted(local_fields - web_fields)
         only_web: list[str] = sorted(web_fields - local_fields)
-        only_web = [f for f in only_web if f.lower() not in IGNORE_WEB_FIELDS]
+        only_web: list[str] = [f for f in only_web if f.lower() not in IGNORE_WEB_FIELDS]
         if only_local or only_web:
             diff_lines.append(f"[{class_name}]")
             if only_local:
-                items = ", ".join(only_local)
+                items: str = ", ".join(only_local)
                 diff_lines.append(f"  仅在本地 ({len(only_local)}): {items}")
             if only_web:
-                items = ", ".join(only_web)
+                items: str = ", ".join(only_web)
                 diff_lines.append(f"  仅在网页 ({len(only_web)}): {items}")
 
     return diff_lines

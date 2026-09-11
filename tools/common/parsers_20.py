@@ -39,29 +39,29 @@ def func_analyze_web(url: str) -> set[str]:
     """
     out_funcs: set[str] = set()
     try:
-        response = requests.get(url, timeout=15)
+        response: requests.Response = requests.get(url, timeout=15)
         response.encoding = "utf-8"
     except Exception:
         return out_funcs
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    soup: BeautifulSoup = BeautifulSoup(response.text, "html.parser")
 
     # 从表格中提取函数名
     for table in soup.find_all("table"):
         for row in table.find_all("tr"):
             cells = row.find_all("td")
             if len(cells) >= 2:
-                func_cell = cells[1]
-                func_text = func_cell.get_text(strip=True)
-                func_name = re.sub(r"\(.*\)$", "", func_text).strip()
+                func_cell: Tag = cells[1]
+                func_text: str = func_cell.get_text(strip=True)
+                func_name: str = re.sub(r"\(.*\)$", "", func_text).strip()
                 if func_name and func_name not in WEB_FILTER_BLACKLIST:
                     if re.fullmatch(r"[A-Za-z_]\w*", func_name):
                         out_funcs.add(func_name)
 
     # 从标题（h2/h3/h4）中提取函数名
     for heading in soup.find_all(["h2", "h3", "h4"]):
-        text = heading.get_text(strip=True)
-        text = re.sub(r"[\u200b\u200c\u200d\ufeff]+", "", text)
+        text: str = heading.get_text(strip=True)
+        text: str = re.sub(r"[\u200b\u200c\u200d\ufeff]+", "", text)
         if text and re.fullmatch(r"[A-Za-z_]\w*", text):
             if text not in WEB_FILTER_BLACKLIST:
                 out_funcs.add(text)
@@ -74,7 +74,6 @@ def func_module_name_from_file(filename: str) -> str:
 
     Args:
         filename: 文件名（如 MNActor.d.lua）
-
     Returns:
         模块名称（如 Actor）
     """

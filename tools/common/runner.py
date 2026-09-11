@@ -74,6 +74,23 @@ COMPARE_TYPES: list[str] = ["func", "enum", "event"]
 # FuncCompare
 
 
+def _apply_20_skip_filters(
+    module_name: str, local_funcs: set[str], web_funcs: set[str]
+) -> tuple[set[str], set[str]]:
+    """对 2.0 过滤规则做大小写归一化"""
+    normalized_module = module_name.strip()
+    exact_skip = set()
+    for key in FUNC_SKIP_FUNCS_20:
+        if key.lower() == normalized_module.lower():
+            exact_skip = FUNC_SKIP_FUNCS_20[key]
+            break
+
+    if not exact_skip:
+        return local_funcs, web_funcs
+
+    return local_funcs - exact_skip, web_funcs - exact_skip
+
+
 def run_func_compare(version: str) -> Optional[CompareResult]:
     """对比指定版本的函数差异"""
     all_diff: list[str] = []
@@ -86,7 +103,9 @@ def run_func_compare(version: str) -> Optional[CompareResult]:
         if not os.path.exists(_FUNC_PATH_20):
             return None
 
-        local_files: list[str] = sorted(f for f in os.listdir(_FUNC_PATH_20) if f.endswith(".d.lua"))
+        local_files: list[str] = sorted(
+            f for f in os.listdir(_FUNC_PATH_20) if f.endswith(".d.lua")
+        )
 
         for filename in local_files:
             module_name: str = _func_name_20(filename)
@@ -97,11 +116,6 @@ def run_func_compare(version: str) -> Optional[CompareResult]:
 
             local_path: str = os.path.join(_FUNC_PATH_20, filename)
             local_funcs: set[str] = get_function_names(local_path)
-
-            # 移除需要跳过的特定函数
-            skip_funcs = FUNC_SKIP_FUNCS_20.get(module_name, set())
-            if skip_funcs:
-                local_funcs -= skip_funcs
 
             web_funcs: set[str] = set()
             matched_url: str | None = None
@@ -120,6 +134,7 @@ def run_func_compare(version: str) -> Optional[CompareResult]:
                 only_local_count += 1
                 continue
 
+            local_funcs, web_funcs = _apply_20_skip_filters(module_name, local_funcs, web_funcs)
             diff = compare_funcs(local_funcs, web_funcs, module_name)
             all_diff.extend(diff)
 
@@ -475,7 +490,9 @@ def run_upload(
         with open(file_path, "r", encoding="utf-8") as fp:
             payload = json.load(fp)
     except FileNotFoundError:
-        return UploadResult(success=False, kind=kind, data=data_id, error=f"文件不存在: {file_path}")
+        return UploadResult(
+            success=False, kind=kind, data=data_id, error=f"文件不存在: {file_path}"
+        )
     except json.JSONDecodeError as e:
         return UploadResult(success=False, kind=kind, data=data_id, error=f"JSON 解析失败: {e}")
 
@@ -485,7 +502,9 @@ def run_upload(
     try:
         resp = requests.post(url, json=body, timeout=30)
     except requests.RequestException as e:
-        return UploadResult(success=False, kind=kind, data=data_id, url=url, error=f"请求失败: {e}")
+        return UploadResult(
+            success=False, kind=kind, data=data_id, url=url, error=f"请求失败: {e}"
+        )
 
     try:
         resp_json = resp.json()

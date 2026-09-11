@@ -220,7 +220,8 @@ FUNC_TITLE_FILTER_30: set[str] = {"World", "GameObject"}
 FUNC_SKIP_MODULES_20: set[str] = {"EnumLib"}
 
 # 2.0 函数对比中跳过特定模块的指定函数
-FUNC_SKIP_FUNCS_20: dict[str, set[str]] = {"Valuegroup": {"clearNoValueByName"}}
+# 模块名在解析阶段会返回 "ValueGroup"，因此这里使用与真实模块名一致的键名，并在运行器中做大小写归一化
+FUNC_SKIP_FUNCS_20: dict[str, set[str]] = {"ValueGroup": {"clearNoValueByName"}, "Player": {"hideUIView", "openUIView"}, "CustomUI": {"hideUIView", "openUIView", "CloneElement"}}
 
 _CFG: configparser.ConfigParser = configparser.ConfigParser()
 _CFG.read(PROJECT_ROOT / "config.ini", encoding="utf-8")
