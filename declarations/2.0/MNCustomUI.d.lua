@@ -296,6 +296,9 @@ function Customui:SetProgressBarResId(playerId, uiId, elementId, itype, url) ret
 --- @return boolean @是否成功
 function Customui:SmoothIncreaseProgress(playerId, uiId, elementId, time, ptype, value) return true end
 
-function Customui:CloneElement(playerId, uiId, elementid)
-    
-end
+--- 克隆玩家界面元件
+--- @param playerId number @玩家ID
+--- @param uiId string @界面ID
+--- @param elementid string @元件ID
+--- @return number, string @状态码, 元件ID
+function Customui:CloneElement(playerId, uiId, elementid) return 0, "" end
