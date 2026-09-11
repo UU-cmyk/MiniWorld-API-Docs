@@ -106,6 +106,14 @@ MiniWorld API Description 是一个 VS Code 扩展，主要用于：
 | UGC 开发套件 | 2.0 / 3.0 |
 | VS Code | ^1.125.0 |
 
+## AI
+
+- UGC 3.0
+  - [API.txt](./docs/miniworld-ugc-30/references/API.txt)
+  - [SKILL.md](./docs/miniworld-ugc-30/SKILL.md)
+- UGC 2.0
+  - [API.txt](./docs/miniworld-ugc-20/references/API.txt)
+
 ## 项目结构
 
 ```bash
