@@ -17,43 +17,38 @@ export type EventDefinition = {
     event_info?: Record<string, string>;
 };
 
-let eventDefinitionsReady = false;
-let eventDefinitions: Map<string, EventDefinition> = new Map();
-let cachedCompletionItems: vscode.CompletionItem[] | null = null;
-let cachedClassCompletionItems: Map<EventClass30, vscode.CompletionItem[]> = new Map();
-let currentMode: CompletionMode = '2.0';
+/** 事件补全的会话状态，集中管理避免散落的模块级变量 */
+type CompletionState = {
+    mode: CompletionMode;
+    ready: boolean;
+    definitions: Map<string, EventDefinition>;
+    /** 2.0 模式的完整补全项缓存 */
+    flatItems: vscode.CompletionItem[] | null;
+    /** 3.0 模式按类名缓存的补全项 */
+    classItems: Map<EventClass30, vscode.CompletionItem[]>;
+};
+
+const state: CompletionState = {
+    mode: '2.0',
+    ready: false,
+    definitions: new Map(),
+    flatItems: null,
+    classItems: new Map(),
+};
+
 let loadSeq = 0;
 
 function getEventDefinitionsFile(context: vscode.ExtensionContext, mode: '2.0' | '3.0'): string {
     const rel = mode === '3.0' ? EVENT_DEFINITIONS_FILE_30 : EVENT_DEFINITIONS_FILE_20;
-    const bundledFile = path.resolve(context.extensionPath, rel);
-    return fs.existsSync(bundledFile) ? bundledFile : path.resolve(context.extensionPath, '..', rel);
-}
-
-/** 获取（必要时构建）2.0 模式的补全缓存 */
-function getCachedCompletionItems(): vscode.CompletionItem[] {
-    if (!cachedCompletionItems) {
-        cachedCompletionItems = buildEventCompletionItems(eventDefinitions);
-    }
-    return cachedCompletionItems;
-}
-
-/** 获取（必要时构建）3.0 模式指定事件类的补全缓存 */
-function getCachedClassCompletionItems(className: EventClass30): vscode.CompletionItem[] {
-    let items = cachedClassCompletionItems.get(className);
-    if (!items) {
-        items = buildClassCompletionItems(eventDefinitions, className);
-        cachedClassCompletionItems.set(className, items);
-    }
-    return items;
+    const bundled = path.resolve(context.extensionPath, rel);
+    return fs.existsSync(bundled) ? bundled : path.resolve(context.extensionPath, '..', rel);
 }
 
 export async function parseEventDefinitions(filePath: string): Promise<Map<string, EventDefinition>> {
     try {
         const raw = await fs.promises.readFile(filePath, 'utf8');
         const parsed = JSON.parse(raw) as Record<string, EventDefinition>;
-
-        return new Map(Object.entries(parsed).sort(([left], [right]) => left.localeCompare(right)));
+        return sortEntries(Object.entries(parsed));
     } catch (error) {
         console.warn(`读取事件补全文件失败: ${filePath}`, error);
         return new Map();
@@ -64,67 +59,97 @@ export async function parseEventDefinitions(filePath: string): Promise<Map<strin
 export async function parseLuaEventDefinitions(filePath: string): Promise<Map<string, EventDefinition>> {
     try {
         const raw = await fs.promises.readFile(filePath, 'utf8');
-        const definitions = new Map<string, EventDefinition>();
-        let currentClass: EventClass30 | null = null;
-
-        for (const line of raw.split(/\r?\n/)) {
-            const classMatch = /^---\s+@class\s+(TriggerEvent|ObjectEvent)\b/.exec(line);
-            if (classMatch) {
-                currentClass = classMatch[1] as EventClass30;
-                continue;
-            }
-
-            const fieldMatch = /^---\s+@field\s+(\w+)\s+\S+\s+@(.+?)(?:\s+\{(.*)\})?\s*$/.exec(line);
-            if (!currentClass || !fieldMatch) {
-                continue;
-            }
-
-            const [, fieldName, desc, rawParams] = fieldMatch;
-            const eventInfo: Record<string, string> = {};
-            if (rawParams) {
-                for (const part of rawParams.split(/,\s*(?=\w+(?:,\w+)*:)/)) {
-                    const separator = part.indexOf(':');
-                    if (separator === -1) {
-                        continue;
-                    }
-                    const names = part.slice(0, separator).split(',').map(name => name.trim()).filter(Boolean);
-                    const value = part.slice(separator + 1).trim();
-                    for (const name of names) {
-                        eventInfo[name] = value;
-                    }
-                }
-            }
-
-            definitions.set(`${currentClass}.${fieldName}`, {
-                desc: desc.trim(),
-                ...(Object.keys(eventInfo).length > 0 ? { event_info: eventInfo } : {}),
-            });
-        }
-
-        return new Map(Array.from(definitions.entries()).sort(([left], [right]) => left.localeCompare(right)));
+        return sortEntries(Array.from(parseLuaDefinitions(raw).entries()));
     } catch (error) {
         console.warn(`读取事件补全文件失败: ${filePath}`, error);
         return new Map();
     }
 }
 
+/** 将事件键按字典序排序，保证补全列表顺序稳定 */
+function sortEntries(entries: [string, EventDefinition][]): Map<string, EventDefinition> {
+    entries.sort(([left], [right]) => left.localeCompare(right));
+    return new Map(entries);
+}
+
+/** 从 LuaDoc 源文本中提取以 `ClassName.fieldName` 为键的事件定义 */
+function parseLuaDefinitions(raw: string): Map<string, EventDefinition> {
+    const definitions = new Map<string, EventDefinition>();
+    let currentClass: EventClass30 | null = null;
+
+    const classRe = /^---\s+@class\s+(TriggerEvent|ObjectEvent)\b/;
+    const fieldRe = /^---\s+@field\s+(\w+)\s+\S+\s+@(.+?)(?:\s+\{(.*)\})?\s*$/;
+
+    for (const line of raw.split(/\r?\n/)) {
+        const classMatch = classRe.exec(line);
+        if (classMatch) {
+            currentClass = classMatch[1] as EventClass30;
+            continue;
+        }
+
+        const fieldMatch = fieldRe.exec(line);
+        if (!currentClass || !fieldMatch) {
+            continue;
+        }
+
+        const [, fieldName, desc, rawParams] = fieldMatch;
+        const eventInfo = parseEventInfoParams(rawParams);
+        definitions.set(`${currentClass}.${fieldName}`, {
+            desc: desc.trim(),
+            ...(Object.keys(eventInfo).length > 0 ? { event_info: eventInfo } : {}),
+        });
+    }
+
+    return definitions;
+}
+
+/** 解析 LuaDoc `@field` 的 `{name:type,name2:type2}` 形式参数列表 */
+function parseEventInfoParams(rawParams: string | undefined): Record<string, string> {
+    const eventInfo: Record<string, string> = {};
+    if (!rawParams) {
+        return eventInfo;
+    }
+
+    for (const part of rawParams.split(/,\s*(?=\w+(?:,\w+)*:)/)) {
+        const separator = part.indexOf(':');
+        if (separator === -1) {
+            continue;
+        }
+        const value = part.slice(separator + 1).trim();
+        for (const name of part.slice(0, separator).split(',')) {
+            const trimmed = name.trim();
+            if (trimmed) {
+                eventInfo[trimmed] = value;
+            }
+        }
+    }
+    return eventInfo;
+}
+
 /** 构建事件的 Markdown 文档（描述 + 参数表） */
 function buildEventDocumentation(definition: EventDefinition): vscode.MarkdownString {
-    const infoLines = definition.event_info
-        ? Object.entries(definition.event_info).map(([key, value]) => `- ${key}: ${value}`)
-        : [];
+    const sections: string[] = [];
 
-    const documentation = [
-        definition.desc ? `**${definition.desc}**` : '',
-        infoLines.length > 0 ? `参数:\n${infoLines.join('\n')}` : '',
-    ].filter(Boolean).join('\n\n');
+    if (definition.desc) {
+        sections.push(`**${definition.desc}**`);
+    }
+    if (definition.event_info) {
+        const lines = Object.entries(definition.event_info).map(([key, value]) => `- ${key}: ${value}`);
+        if (lines.length > 0) {
+            sections.push(`参数:\n${lines.join('\n')}`);
+        }
+    }
 
-    return new vscode.MarkdownString(documentation);
+    const md = new vscode.MarkdownString(sections.join('\n\n'));
+    md.isTrusted = true;
+    return md;
 }
 
 /** 构建 2.0 模式的补全项（键为完整事件名，补全后自动包裹长括号） */
 export function buildEventCompletionItems(definitions: Map<string, EventDefinition>): vscode.CompletionItem[] {
-    return Array.from(definitions.entries()).map(([eventName, definition]) => {
+    const items: vscode.CompletionItem[] = [];
+
+    for (const [eventName, definition] of definitions) {
         const item = new vscode.CompletionItem(eventName, vscode.CompletionItemKind.Event);
         item.detail = definition.desc ?? 'MiniWorld 事件';
         item.filterText = eventName;
@@ -132,12 +157,13 @@ export function buildEventCompletionItems(definitions: Map<string, EventDefiniti
         item.command = {
             command: 'complete.wrapEventBrackets',
             title: '补全事件长括号',
-            arguments: [eventName]
+            arguments: [eventName],
         };
         item.documentation = buildEventDocumentation(definition);
+        items.push(item);
+    }
 
-        return item;
-    });
+    return items;
 }
 
 /** 构建 3.0 模式指定事件类的补全项（按类名前缀筛选，直接插入字段名） */
@@ -146,47 +172,72 @@ export function buildClassCompletionItems(
     className: EventClass30,
 ): vscode.CompletionItem[] {
     const prefix = `${className}.`;
-    return Array.from(definitions.entries())
-        .filter(([key]) => key.startsWith(prefix))
-        .map(([key, definition]) => {
-            const fieldName = key.substring(prefix.length);
-            const item = new vscode.CompletionItem(fieldName, vscode.CompletionItemKind.Event);
-            item.detail = definition.desc ?? `MiniWorld ${className} 事件`;
-            item.filterText = fieldName;
-            item.insertText = fieldName;
-            item.documentation = buildEventDocumentation(definition);
+    const items: vscode.CompletionItem[] = [];
 
-            return item;
-        });
+    for (const [key, definition] of definitions) {
+        if (!key.startsWith(prefix)) {
+            continue;
+        }
+        const fieldName = key.substring(prefix.length);
+        const item = new vscode.CompletionItem(fieldName, vscode.CompletionItemKind.Event);
+        item.detail = definition.desc ?? `MiniWorld ${className} 事件`;
+        item.filterText = fieldName;
+        item.insertText = fieldName;
+        item.documentation = buildEventDocumentation(definition);
+        items.push(item);
+    }
+
+    return items;
 }
+
+/** 取得 3.0 模式下某事件类的补全项，必要时构建并缓存 */
+function getClassItems(className: EventClass30): vscode.CompletionItem[] {
+    let items = state.classItems.get(className);
+    if (!items) {
+        items = buildClassCompletionItems(state.definitions, className);
+        state.classItems.set(className, items);
+    }
+    return items;
+}
+
+type CompletionContext =
+    | { kind: '2.0' }
+    | { kind: '3.0'; className: EventClass30 };
 
 /**
  * 判断光标前的补全上下文。
- * - 2.0：`[=[` 长括号字符串内
+ * - 2.0：`[=[` 与 `]=]` 之间的长括号字符串内
  * - 3.0：`TriggerEvent.` / `ObjectEvent.` 之后
  */
 function getCompletionContext(
     document: vscode.TextDocument,
     position: vscode.Position,
     mode: '2.0' | '3.0',
-): { kind: '2.0' | '3.0'; className?: EventClass30; prefix: string } | null {
-    const textBeforeCursor = document.lineAt(position.line).text.substring(0, position.character);
+): CompletionContext | null {
+    const lineText = document.lineAt(position.line).text;
+    const textBefore = lineText.substring(0, position.character);
 
     if (mode === '3.0') {
         // 前面须为非标识符或行首，避免误匹配 AddTriggerEvent
-        const match = /(?:^|[^\w])(TriggerEvent|ObjectEvent)\.([\w.]*)$/.exec(textBeforeCursor);
-        if (match) {
-            return { kind: '3.0', className: match[1] as EventClass30, prefix: match[2] };
-        }
+        const match = /(?:^|[^\w])(TriggerEvent|ObjectEvent)\.[\w.]*$/.exec(textBefore);
+        return match ? { kind: '3.0', className: match[1] as EventClass30 } : null;
+    }
+
+    const openIdx = textBefore.lastIndexOf('[=[');
+    if (openIdx === -1) {
         return null;
     }
 
-    const lastLongBracket = textBeforeCursor.lastIndexOf('[=[');
-    if (lastLongBracket !== -1) {
-        return { kind: '2.0', prefix: textBeforeCursor.substring(lastLongBracket + 3) };
+    // `[=[` 与光标之间若已出现 `]=]`，说明光标在字符串之外
+    if (textBefore.substring(openIdx + 3).includes(']=]')) {
+        return null;
+    }
+    // 光标之后若已有 `]=]`，说明光标在字符串之外
+    if (lineText.substring(position.character).includes(']=]')) {
+        return null;
     }
 
-    return null;
+    return { kind: '2.0' };
 }
 
 /**
@@ -196,101 +247,112 @@ function getCompletionContext(
 export function registerEventCompletion(context: vscode.ExtensionContext): vscode.Disposable[] {
     const disposables: vscode.Disposable[] = [];
 
-    /** 按当前设置异步加载对应版本的事件定义 */
-    function loadEventDefinitions(): void {
+    async function loadEventDefinitions(): Promise<void> {
         const targetMode = getCompletionMode();
         const seq = ++loadSeq;
-        currentMode = targetMode;
-        eventDefinitionsReady = false;
-        cachedCompletionItems = null;
-        cachedClassCompletionItems.clear();
+
+        state.mode = targetMode;
+        state.ready = false;
+        state.definitions = new Map();
+        state.flatItems = null;
+        state.classItems.clear();
 
         if (targetMode === 'off') {
             return;
         }
 
         const filePath = getEventDefinitionsFile(context, targetMode);
-        const parse = targetMode === '3.0' ? parseLuaEventDefinitions : parseEventDefinitions;
-        parse(filePath).then(defs => {
-            if (seq !== loadSeq) { return; }
-            eventDefinitions = defs;
-            if (targetMode === '3.0') {
-                cachedClassCompletionItems.clear();
-            } else {
-                cachedCompletionItems = buildEventCompletionItems(defs);
+        const parser = targetMode === '3.0' ? parseLuaEventDefinitions : parseEventDefinitions;
+
+        try {
+            const defs = await parser(filePath);
+            if (seq !== loadSeq) {
+                return;
             }
-            eventDefinitionsReady = true;
-        });
+
+            state.definitions = defs;
+            // 2.0 一次性构建完整缓存；3.0 按需懒构建，避免为未使用的类付出代价
+            if (targetMode === '2.0') {
+                state.flatItems = buildEventCompletionItems(defs);
+            }
+            state.ready = true;
+        } catch (error) {
+            console.warn('加载事件补全定义失败', error);
+        }
     }
 
-    loadEventDefinitions();
+    void loadEventDefinitions();
 
-    // 设置变化时重载事件定义
     disposables.push(
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration(COMPLETION_MODE_SETTING)) {
-                loadEventDefinitions();
+                void loadEventDefinitions();
             }
-        })
+        }),
     );
 
-    // 注册补全提供者（触发字符 '.'）
     disposables.push(
         vscode.languages.registerCompletionItemProvider(
             { language: 'lua' },
             {
-                provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-                    if (currentMode === 'off' || !eventDefinitionsReady) {
-                        return [];
+                provideCompletionItems(document, position) {
+                    if (state.mode === 'off' || !state.ready) {
+                        return undefined;
                     }
-                    const context = getCompletionContext(document, position, currentMode);
-                    if (context === null) {
-                        return [];
+
+                    const ctx = getCompletionContext(document, position, state.mode);
+                    if (ctx === null) {
+                        return undefined;
                     }
+
                     // 返回缓存项，由 VS Code 基于 filterText 原生过滤；
                     // CompletionList(isIncomplete:false) 让结果被缓存，避免重复触发。
-                    if (context.kind === '2.0') {
-                        return new vscode.CompletionList(getCachedCompletionItems(), false);
+                    if (ctx.kind === '2.0') {
+                        return new vscode.CompletionList(state.flatItems ?? [], false);
                     }
-                    return new vscode.CompletionList(getCachedClassCompletionItems(context.className!), false);
+                    return new vscode.CompletionList(getClassItems(ctx.className), false);
                 },
             },
-            '.'
-        )
+            '.',
+        ),
     );
 
-    // 注册长括号包裹命令
     disposables.push(
-        vscode.commands.registerCommand('complete.wrapEventBrackets', (eventName: string) => {
+        vscode.commands.registerCommand('complete.wrapEventBrackets', (eventName: unknown) => {
+            if (typeof eventName !== 'string' || !eventName) {
+                return;
+            }
+
             const editor = vscode.window.activeTextEditor;
-            if (!editor || !eventName) { return; }
+            if (!editor) {
+                return;
+            }
 
             const document = editor.document;
-            const cursorPos = editor.selection.active;
-            const eventStartPos = new vscode.Position(cursorPos.line, cursorPos.character - eventName.length);
-
-            if (eventStartPos.character < 0) { return; }
-
-            const lineText = document.lineAt(cursorPos.line).text;
-            const textBeforeEvent = lineText.substring(0, eventStartPos.character);
-            const textAfterEvent = lineText.substring(cursorPos.character);
-
-            const hasLeftBracket = textBeforeEvent.endsWith('[=[');
-            const hasRightBracket = textAfterEvent.startsWith(']=]');
-
-            const edits: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
-
-            if (!hasLeftBracket) {
-                edits.insert(document.uri, eventStartPos, '[=[');
+            const cursor = editor.selection.active;
+            const startChar = cursor.character - eventName.length;
+            if (startChar < 0) {
+                return;
             }
-            if (!hasRightBracket) {
-                edits.insert(document.uri, cursorPos, ']=]');
+
+            const lineText = document.lineAt(cursor.line).text;
+            const before = lineText.substring(0, startChar);
+            const after = lineText.substring(cursor.character);
+
+            const edits = new vscode.WorkspaceEdit();
+            const startPos = new vscode.Position(cursor.line, startChar);
+
+            if (!before.endsWith('[=[')) {
+                edits.insert(document.uri, startPos, '[=[');
+            }
+            if (!after.startsWith(']=]')) {
+                edits.insert(document.uri, cursor, ']=]');
             }
 
             if (edits.size > 0) {
-                vscode.workspace.applyEdit(edits);
+                void vscode.workspace.applyEdit(edits);
             }
-        })
+        }),
     );
 
     return disposables;
