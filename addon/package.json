@@ -3,6 +3,7 @@
   "publisher": "UU-cmyk",
   "displayName": "MiniWorld API Description",
   "description": "MiniWorld API Description",
+  "icon": "img/addon-icon.png",
   "version": "0.7.0",
   "repository": {
     "type": "git",
