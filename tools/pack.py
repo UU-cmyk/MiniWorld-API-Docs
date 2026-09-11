@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""MiniWorld-API-Desc 打包脚本的 Python 版本。
+"""MiniWorld-API-Desc 打包脚本的 Python 版本
 
-功能与原始 PowerShell 脚本保持一致：
 1. 清理旧的编译输出
 2. 安装/更新 npm 依赖
 3. 使用 esbuild 编译 TypeScript（单文件打包）
@@ -85,7 +84,9 @@ def _run_command(command: Sequence[str], cwd: Path, description: str) -> None:
     try:
         completed = subprocess.run(resolved_command, cwd=str(cwd), check=False)
     except FileNotFoundError as exc:
-        raise PackError(f"未找到可执行文件 '{command[0]}'。请先安装 Node.js / npm，并确保它已加入 PATH。") from exc
+        raise PackError(
+            f"未找到可执行文件 '{command[0]}'。请先安装 Node.js / npm，并确保它已加入 PATH。"
+        ) from exc
 
     if completed.returncode != 0:
         raise PackError(f"命令失败: {' '.join(resolved_command)}")
@@ -165,17 +166,50 @@ def main(
     output_vsix = project_root / "miniworld-api-desc-addon.vsix"
     addon_declarations = addon_dir / "declarations"
     source_declarations = project_root / "declarations"
+    addon_license = addon_dir / "LICENSE"
+    source_license = project_root / "LICENSE"
+    addon_img = addon_dir / "img"
+    source_img = project_root / "img"
+
+    # 临时复制 declarations/ 到扩展打包目录
     if addon_declarations.exists():
         shutil.rmtree(addon_declarations)
     shutil.copytree(source_declarations, addon_declarations)
     _print_step("已将 declarations/ 临时加入扩展打包目录")
+
+    # 临时复制 LICENSE 到扩展打包目录
+    license_copied = False
+    img_copied = False
+    if addon_img.exists():
+        _print_warning("addon/img 已存在，跳过临时复制（直接使用现有资源）")
+    elif source_img.exists():
+        shutil.copytree(source_img, addon_img)
+        img_copied = True
+        _print_step("已将 img/ 临时加入扩展打包目录")
+    else:
+        _print_warning(f"未找到 {source_img}，跳过复制 img/")
+    if source_license.exists():
+        shutil.copy2(source_license, addon_license)
+        license_copied = True
+        _print_step("已将 LICENSE 临时加入扩展打包目录")
+    else:
+        _print_warning(f"未找到 {source_license}，跳过复制 LICENSE")
+
     try:
-        _run_command(["vsce", "package", "--out", str(output_vsix)], addon_dir, "打包 VS Code 扩展")
+        _run_command(
+            ["vsce", "package", "--out", str(output_vsix)], addon_dir, "打包 VS Code 扩展"
+        )
         _print_success(f"打包完成！输出: {output_vsix}")
     finally:
         if addon_declarations.exists():
             shutil.rmtree(addon_declarations)
             _print_step("已移除打包临时声明目录")
+        if license_copied and addon_license.exists():
+            addon_license.unlink()
+            _print_step("已移除打包临时 LICENSE")
+        if img_copied and addon_img.exists():
+            shutil.rmtree(addon_img)
+            _print_step("已移除打包临时 img 目录")
 
     summary = Table(title="打包结果", style="cyan")
     summary.add_column("项目", style="bold")
