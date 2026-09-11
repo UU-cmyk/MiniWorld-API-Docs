@@ -17,290 +17,117 @@
 [![English Version README](https://img.shields.io/badge/English-README-blue?logo=markdown)](./README.en.md)
 </div>
 
-> **不再推荐使用声明文件来进行声明，推荐使用声明插件。**  
-> 安装本扩展后，通过 `Ctrl+Shift+P` 执行相应命令即可自动配置声明路径，无需手动操作。
+> 本仓库提供的是 VS Code 扩展与声明文件，推荐使用扩展自动管理声明。
 
-📚 **目录**
+## 概览
 
-- [快速开始](#快速开始)
-- [API 搜索](#api-搜索)
-- [插件命令](#插件命令)
-- [项目结构](#项目结构)
-- [工具脚本](#工具脚本)
-- [AI 使用建议](#ai-使用建议)
-- [自行构建](#自行构建)
-- [适用范围](#适用范围)
-- [贡献指南](#贡献指南)
-- [注意事项](#注意事项)
-- [许可协议](#许可协议)
+MiniWorld API Description 是一个 VS Code 扩展，主要用于：
 
----
+- 提供 UGC 2.0 / 3.0 的 Lua 类型声明
+- 通过 `miniworld.completion` 自动切换补全模式
+- 提供侧边栏 API 搜索
+- 提供事件补全与相关缓存管理
 
-提供完整的 Lua 类型声明文件，配合 VS Code 的 [Lua 语言服务（sumneko.lua）](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) 获得智能补全、类型提示和参数文档；同时提供事件补全插件、代码片段模板和 API 对比脚本，提升 UGC 组件开发效率。
+## 功能说明
 
-## 快速开始
+### 1. 类型声明与补全
+
+扩展会根据 `miniworld.completion` 设定自动同步对应版本的声明目录到 Lua 语言服务。
+
+可用值：
+
+| 设置值 | 行为 |
+| :-: | :-: |
+| `2.0` | 自动加载 UGC 2.0 声明，并启用 2.0 事件补全 |
+| `3.0` | 自动加载 UGC 3.0 声明，并启用 3.0 事件补全 |
+| `off` | 移除 MiniWorld 声明，并关闭事件补全 |
+
+默认值为 `2.0`。扩展会自动处理声明路径，同步全局 `Lua.workspace.library` 配置，且会清理旧版残留配置。
+
+### 2. API 搜索
+
+扩展提供侧边栏 API 搜索视图，可在编辑器中直接检索：
+
+- 函数
+- 枚举
+- 事件
+
+### 3. 事件补全
+
+在 `ScriptSupportEvent([=[...]=])` 等场景中，扩展会提供对应版本的事件补全；`TriggerEvent.` / `ObjectEvent.` 后也可以补全 3.0 事件字段。
+
+### 4. 缓存管理
+
+扩展提供了清空 ID 数据缓存命令，可重新下载并刷新缓存数据。
+
+## 安装与使用
 
 ### 前置依赖
 
-| 依赖 | 必选 | 说明 |
-| :-- | :-: | :-: |
-| [VS Code](https://code.visualstudio.com/) | 是 | 提供代码补全、类型提示等功能 |
-| [Lua 语言服务插件（sumneko.lua）](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) | 是 | 提供 Lua 语言服务，需安装插件 |
-| Python 3.10+ | 否 | 仅使用工具脚本时需要 |
-| Node.js | 否 | 仅自行构建扩展时需要 |
-| PowerShell 5.1+ | 否 | 仅自行构建扩展时需要 |
+- [VS Code](https://code.visualstudio.com/) ^1.125.0
+- [Lua Language Server](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
 
-### 安装扩展
+### 安装方式
 
-1. 从 [GitHub Releases](https://github.com/LK-cmyk/MiniWorld-API-Desc/releases) 下载 `.vsix` 文件
-2. 打开扩展面板（`Ctrl+Shift+X`）
-3. 点击右上角 `···` → `从 VSIX 安装...`
-4. 选择下载的 `.vsix` 文件
+1. 下载发布的 `.vsix` 包
+2. 在 VS Code 中执行：Extensions → `···` → `Install from VSIX...`
+3. 选择下载的文件安装
 
-安装后按下 `Ctrl+Shift+P`，执行以下任一命令即可启用类型提示
+### 首次配置
 
-- `MiniWorld API Description: 添加 MiniWorld UGC 3.0 声明`
-- `MiniWorld API Description: 添加 MiniWorld UGC 2.0 声明`
+打开任意 `.lua` 文件后，扩展会按当前 `miniworld.completion` 设置自动同步对应声明版本；通常无需手动配置。
 
-> 💡 2.0 与 3.0 声明为互斥关系，不可同时共存
+## 扩展命令
 
-### 首次使用流程
-
-打开任意 `.lua` 文件时，插件会自动检测声明路径是否已配置。若未配置，弹出提示窗口：
-
-| 选项 | 行为 |
-| :-: | :-: |
-| **不添加声明** | 4 小时内不再提示 |
-| **永不提醒** | 永久不再提示 |
-| **添加 2.0 / 3.0 声明** | 弹出范围选择，将声明路径写入指定作用域 |
-
-## 插件命令
-
-按下 `Ctrl+Shift+P` 打开命令面板，输入关键词 `MiniWorld` 即可找到以下命令：
+按 `Ctrl+Shift+P` 可在命令面板中找到这些命令：
 
 | 命令 | 说明 |
 | :-: | :-: |
-| `MiniWorld API Description: 添加 MiniWorld UGC 2.0 声明` | 将 2.0 声明目录添加到 `Lua.workspace.library` |
-| `MiniWorld API Description: 移除 MiniWorld UGC 2.0 声明` | 从配置中移除 2.0 声明目录 |
-| `MiniWorld API Description: 添加 MiniWorld UGC 3.0 声明` | 将 3.0 声明目录添加到 `Lua.workspace.library` |
-| `MiniWorld API Description: 移除 MiniWorld UGC 3.0 声明` | 从配置中移除 3.0 声明目录 |
-| `MiniWorld API Description: 打开 API 搜索` | 打开 API 搜索面板，快速检索函数、枚举、事件 |
-| `MiniWorld API Description: 刷新 API 搜索索引` | 重新扫描声明文件，更新搜索索引 |
+| `MiniWorld API Description: 添加 MiniWorld UGC 声明` | 选择版本并设置 `miniworld.completion`，扩展自动同步声明 |
+| `MiniWorld API Description: 清除 MiniWorld UGC 补全` | 清除补全配置，关闭补全能力 |
+| `MiniWorld API Description: 打开 API 搜索` | 打开侧边栏 API 搜索视图 |
+| `MiniWorld API Description: 刷新 API 搜索索引` | 重新扫描声明文件并更新索引 |
+| `MiniWorld API Description: 清空 ID 数据缓存` | 清空缓存并重新下载 ID 数据 |
 
-### 作用域
+## 配置项
 
-- 执行添加 / 移除命令时，可选择配置写入的作用域
+扩展支持以下设置：
 
-  | 范围 | 说明 |
-  | :-: | :-: |
-  | **全局 (Global)** | 写入用户设置，所有工作区生效 |
-  | **工作区 (Workspace)** | 写入 `.vscode/settings.json`，仅当前工作区生效 |
-  | **工作区文件夹 (WorkspaceFolder)** | 写入工作区文件夹设置 |
-
-插件会根据当前各范围的配置状态自动筛选可用选项：添加时仅显示**未包含**该声明的范围，移除时仅显示**已包含**该声明的范围
-
-### 使用示例
-
-```lua
--- 使用类型提示的示例
-local actor = MNActor.create("testActor")
-local pos = actor:GetPosition()  -- 智能补全和类型提示
-actor:SetPosition(pos.x + 1, pos.y, pos.z)
-```
-
-```lua
--- 使用事件系统
-local function onPlayerJoin(player)
-    print("玩家加入: " .. player.name)
-end
-
-MNGame.addEventListener("onPlayerJoin", onPlayerJoin)
-```
-
-## API 搜索
-
-v0.6.1 新增了 **API 搜索面板**，支持在 VS Code 侧边栏中快速检索所有 MiniWorld API，无需跳出编辑器翻阅文档
-
-### 打开方式
-
-| 方式 | 操作 |
+| 配置项 | 说明 |
 | :-: | :-: |
-| **命令面板** | `Ctrl+Shift+P` → 输入 **MiniWorld API Description: 打开 API 搜索** |
-| **侧边栏按钮** | 点击左侧活动栏的 🔍 **MiniWorld API 搜索** 图标 |
+| `miniworld.completion` | 控制补全模式，支持 `2.0` / `3.0` / `off` |
+| `miniworld.serverUrl` | 设置 ID 数据下载服务器地址，默认 `desc.cmyk.dpdns.org` |
 
-### 功能介绍
+## 兼容性
 
-- **模糊搜索** — 输入关键词即可按名称、参数、描述进行模糊匹配，支持首字母缩写（如输入 `GP` 匹配 `GetPosition`）
-- **筛选过滤** — 支持按版本（2.0 / 3.0）、模块、类型（函数 / 枚举 / 事件）进行筛选
-- **详情查看** — 点击搜索结果可查看完整的参数列表、返回值、枚举值和事件参数
-- **点击跳转** — 点击结果条目即可跳转到声明文件对应的源码位置
-- **刷新索引** — 执行 **MiniWorld API Description: 刷新 API 搜索索引** 命令可重新扫描声明文件
-
-### 快捷键
-
-在搜索输入框中按 `Ctrl+K` 可快速清空搜索内容。
+| 项目 | 版本 |
+| :-: | :-: |
+| 《迷你世界》游戏 | 相关 UGC 版本支持 |
+| UGC 开发套件 | 2.0 / 3.0 |
+| VS Code | ^1.125.0 |
 
 ## 项目结构
 
-当前仓库采用“扩展源码 + 声明源数据 + 工具链 + 运行时服务”的分层结构，便于维护声明、构建扩展和部署 Worker：
-
 ```bash
 MiniWorld-API-Desc/
-├── addon/                    # VS Code 扩展源码与扩展环境
-│   ├── src/                 # TypeScript 入口和功能实现
-│   ├── out/                 # 编译输出（生成）
-│   ├── package.json         # 扩展清单 / npm 脚本
-│   ├── tsconfig.json        # TypeScript 编译配置
-│   ├── eslint.config.mjs    # ESLint 配置
-│   ├── .vscodeignore        # 扩展发布忽略规则
-│   ├── .vscode-test.mjs     # VS Code 测试配置
-│   └── README.md            # 扩展说明
-├── declarations/             # 按版本拆分的 Lua 声明源文件
-│   ├── 2.0/
-│   └── 3.0/
-├── tools/                    # Python 工具脚本与通用逻辑
-│   ├── common/              # 公共解析、比较、合并逻辑
-│   ├── main.py              # 统一 CLI 入口
-│   ├── pack.py              # 扩展打包脚本
-│   ├── out.py               # 输出打包脚本
-│   └── README.md            # 工具说明（可选）
-├── server/                   # Cloudflare Worker / API 代理
-│   ├── src/
-│   └── test/
-├── docs/                     # 参考文档、API 说明与知识资料
-├── img/                      # 图标和图片资源
-├── out/                      # 生成的分析结果、压缩包等输出
-├── .github/                  # GitHub 配置
-├── .vscode/                  # 本地 VS Code 配置
-├── config.ini                # 本地配置
-├── config.example.ini        # 配置示例
-├── pyproject.toml            # Python 工具依赖
-├── README.md                 # 中文文档
-├── README.en.md              # 英文文档
-├── LICENSE                   # 许可证
-├── uv.lock                   # Python 依赖锁定文件
-├── package-lock.json         # 根级锁文件（如使用根工作区安装）
-└── node_modules/             # 本地依赖（按需生成）
+├── addon/  # VS Code 扩展源码
+├── declarations/  # 2.0 / 3.0 声明源
+├── docs/  # 文档与参考资料
+├── tools/  # Python 工具脚本
+├── server/  # Cloudflare Worker
+├── README.md  # 中文说明
+├── README.en.md  # 英文说明
+├── pyproject.toml  # Python 依赖配置
+├── LICENSE  # 许可证
+└── ...
 ```
-
-### 结构原则
-
-- `addon/` 只保留 VS Code 侧扩展实现，不直接承载声明源数据。
-- `declarations/` 作为声明源目录，按版本和模块拆分，便于维护和合并。
-- `tools/` 统一放置脚本入口、公共逻辑和生成任务，避免多个版本目录散落重复脚本。
-- `server/` 负责 API 代理和云端能力，和本地扩展职责分离。
-- `out/` 仅用于生成产物，不作为源代码目录。
-
-## 工具脚本
-
-在仓库根目录运行以下命令（需 Python 3.12+，依赖见 `pyproject.toml`）：
-
-### 统一命令入口
-
-| 类别 | 命令 | 说明 |
-| :-: | :-- | :-: |
-| 查看全部命令 | `python tools/main.py list` | 列出工具支持的所有操作 |
-| 对比函数 | `python tools/main.py compare func --version 2.0` | 对比 2.0 函数差异 |
-| 对比事件 | `python tools/main.py compare event --version 3.0` | 对比 3.0 事件差异 |
-| 对比枚举 | `python tools/main.py compare enum --version 3.0` | 对比 3.0 枚举差异 |
-| 全量对比 | `python tools/main.py compare all` | 同时运行全部对比类型 |
-| 合并声明 | `python tools/main.py merge --version 3.0` | 合并 3.0 声明源 |
-| 生成 AI 文本 | `python tools/main.py desc --version 3.0` | 生成 AI 可用描述文档 |
-| 导出报告 | `python tools/main.py compare all --output out/report.txt` | 将比较结果写入文件 |
-
-### 打包与构建
-
-| 类别 | 命令 | 说明 |
-| :-: | :-- | :-: |
-| 打包扩展 | `python tools/pack.py` | 编译 + lint + 打包 VSIX |
-| 编译仅 | `python tools/pack.py --compile-only` | 仅执行编译，不打包 |
-| 清理输出 | `python tools/pack.py --clean` | 删除编译产物 |
-| Worker 构建 | `npm run build:worker` | 构建 Cloudflare Worker |
-| 扩展编译 | `cd addon; npm run compile` | 编译 TypeScript 扩展 |
-
-### 说明
-
-- 统一入口在 `tools/main.py`，相关逻辑统一放在 `tools/common/` 中，便于扩展新版本和新分析任务。
-- 旧版目录结构中的 `tools/3.0`、`tools/2.0` 形式已被归并到统一工具入口，避免脚本分散。
-- 若需要产出最终可交付包，可使用 `python tools/out.py` 集中生成导出文件和 VSIX。
-
-## AI 使用建议
-
-将以下文件内容提供给 AI 助手，可帮助其理解 UGC：
-
-- UGC 3.0
-  - [SKILL.md](./docs/miniworld-ugc-30/SKILL.md)
-  - [API.txt](./docs/miniworld-ugc-30/references/API.txt)
-- UGC 2.0
-  - [API.txt](./docs/miniworld-ugc-20/references/API.txt)
-
-## 自行构建
-
-需要 Node.js 环境。在项目根目录执行：
-
-### 构建选项
-
-| 命令 | 说明 |
-| :-- | :-: |
-| `./pack.ps1` | 完整打包（编译 + 检查 + 打包） |
-| `./pack.ps1 -CompileOnly` | 仅编译，不打包 |
-| `./pack.ps1 -SkipLint` | 跳过 lint 检查 |
-| `./pack.ps1 -SkipInstall` | 跳过 npm install |
-| `./pack.ps1 -Clean` | 仅清除编译输出 |
-
-### 构建流程
-
-```bash
-npm install # 1. 安装依赖
-tsc # 2. 编译 TypeScript
-./pack.ps1 # 3. 打包扩展
-code --install-extension MiniWorld-API-Desc.vsix # 4. 安装扩展（可选）
-```
-
-打包完成后会在根目录生成 `.vsix` 文件，可直接安装到 VS Code。
-
-## 适用范围
-
-| 项目 | 版本 |
-| :-- | :-: |
-| 《迷你世界》游戏 | v1.58+ |
-| UGC 开发套件 | 3.0 & 2.0 |
-| Python | 3.10+ |
-| VS Code | ^1.125.0 |
-
-### 系统要求
-
-- **操作系统**: Windows, macOS, Linux
-- **内存**: 最小 4GB RAM
-- **存储**: 最小 100MB 可用空间
-- **网络**: 稳定的互联网连接（用于下载扩展）
-
-### 已知限制
-
-- 仅支持 UGC 3.0 和 2.0 版本
-- 部分高级功能可能需要重启 VS Code
-- 大型项目可能需要调整 VS Code 性能设置
 
 ## 注意事项
 
-- 本仓库声明文件，与扩展仅面向 **UGC 3.0** & **UGC 2.0**，请勿用于其他版本
-- 部分接口可能与实际游戏版本存在差异，请以游戏实际行为为准
-- 如发现问题或需要补充 API，欢迎提交 [Issue](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues) 或发起 Pull Request
-
-## Star 历史
-
-[![Star History Chart](https://api.star-history.com/chart?repos=UU-cmyk/MiniWorld-API-Desc&type=date&legend=top-left&sealed_token=4cyhbjVHKRN0PDaVtuWiTHVlDqVePSy4bhXV9-kk7E4mAvoA3Trj5OWw-BoAwRDDB-V8WyDJgFxBYsSqzpp4ygy20daMLZUrhQOa_RA0OYiQkMPonOTlgOHkVJbJczSog89zshYnQf_PDPnhpIOlre6oK7jsVZks9VhrSXEotmzuzAJpl-EIvX9jgxKz)](https://www.star-history.com/?repos=UU-cmyk%2FMiniWorld-API-Desc&type=date&legend=top-left)
-
-## 贡献指南
-
-欢迎为本项目贡献代码或提交问题！
-
-### 报告问题
-
-- 使用 [GitHub Issues](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues) 报告 bug
-- 提供详细的复现步骤和错误信息
-- 附上相关的代码片段和日志
+- 本扩展仅面向 UGC 2.0 / 3.0
+- 部分接口可能与实际游戏行为存在差异，最终以游戏表现为准
+- 若发现问题或需要补充 API，欢迎提交 Issue 或 Pull Request
 
 ## 许可协议
 
-本项目采用 [MIT](./LICENSE) 许可证发布
+本项目采用 [MIT](./LICENSE) 许可证发布。

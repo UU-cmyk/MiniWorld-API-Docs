@@ -3,88 +3,71 @@
 ![VS Code](https://img.shields.io/badge/VS%20Code-^1.125.0-blue)
 ![Lua](https://img.shields.io/badge/Lua-5.1%2B-yellow)
 
-A VS Code extension providing Lua type declarations, API search, and event completion for *Mini World* (迷你世界) UGC development.
+A VS Code extension providing Lua type declarations, API search, and event completion for MiniWorld UGC development.
 
-## Features
+## English
 
-### 📦 Type Declarations
+### Features
 
-Provides complete Lua type declaration files for **UGC 3.0** & **UGC 2.0**, working with the [Lua Language Server (sumneko.lua)](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) to deliver:
+#### 📦 Type declarations
 
-- Intelligent autocompletion
-- Type hints and parameter documentation
-- Inline function signatures
+The extension provides Lua declaration files for **UGC 2.0** and **UGC 3.0** and automatically syncs the selected declaration version to the Lua language service.
 
-The **`miniworld.completion`** setting automatically loads the corresponding declaration version into the Lua language server. Manual commands are also available:
-
-| Command | Description |
-| :-: | :-: |
-| `MiniWorld API Description: Add MiniWorld UGC Declarations` | Add 2.0 or 3.0 declarations to `Lua.workspace.library` |
-
-2.0 and 3.0 declarations are mutually exclusive; switching the completion mode replaces them automatically.
-
-### 🔍 API Search
-
-Search all MiniWorld APIs directly from the VS Code sidebar — no need to leave your editor.
-
-| Method | Action |
-| :-: | :-: |
-| **Command Palette** | `Ctrl+Shift+P` → **MiniWorld API Description: Open API Search** |
-| **Sidebar** | Click the 🔍 **MiniWorld API Search** icon in the activity bar |
-
-- **Fuzzy Search** — Type keywords to fuzzy-match API names, parameters, and descriptions (e.g., `GP` matches `GetPosition`)
-- **Filters** — Filter by version (2.0 / 3.0), module, and type (function / enum / event)
-- **Detail View** — Click a result to see full parameter lists, return values, and more
-- **Click to Navigate** — Click any result to jump to the declaration source
-- **Quick Clear** — Press `Ctrl+K` in the search input to clear the query
-
-### ⚡ Completion
-
-The **`miniworld.completion`** setting controls the entire completion capability of the extension (enabled by default, based on UGC 2.0):
+The `miniworld.completion` setting controls the completion mode:
 
 | Value | Behavior |
 | :-: | :-: |
-| `2.0` (default) | Automatically loads 2.0 declarations (API/type completion), and completes 2.0 event names inside `ScriptSupportEvent([=[...]=])` long brackets (auto-wraps with `[=[ ... ]=]`) |
-| `3.0` | Automatically loads 3.0 declarations (API/type completion), and completes 3.0 event fields after `TriggerEvent.` / `ObjectEvent.` (enum references, no long brackets) |
-| `off` | Removes MiniWorld declarations and disables event completion — completely disables completion |
+| `2.0` | Enables UGC 2.0 declaration completion and 2.0 event completion |
+| `3.0` | Enables UGC 3.0 declaration completion and 3.0 event completion |
+| `off` | Removes MiniWorld declarations and disables event completion |
 
-> Changes apply without reloading the window; the extension automatically syncs declarations and reloads the corresponding event definitions.
+The default value is `2.0`.
 
-## First-Time Setup
+#### 🔍 API Search
 
-When you open any `.lua` file, the extension automatically enables the corresponding declaration version based on the completion mode setting (default 2.0) — no manual setup required.
+Open the API search view from the activity bar or command palette to search for functions, enums, events, and parameter information.
 
-## Requirements
+- Supports filtering by version, module, and type
+- Supports click-to-jump behavior
+- Refreshes the index with a dedicated command
 
-- [VS Code](https://code.visualstudio.com/) ^1.125.0
-- [Lua Language Server extension (sumneko.lua)](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) — automatically installed as a dependency
+#### ⚡ Event completion
 
-## Extension Commands
+The extension completes events in relevant contexts such as `ScriptSupportEvent([=[...]=])` and after `TriggerEvent.` / `ObjectEvent.`.
+
+### Commands
 
 | Command | Description |
 | :-: | :-: |
-| `MiniWorld API Description: Add MiniWorld UGC Declarations` | Choose version (2.0 / 3.0) and add the declaration directory to `Lua.workspace.library` |
-| `MiniWorld API Description: Clear MiniWorld UGC Completion` | One-click clear completion (sets the completion mode to `off`, removes declarations and disables event completion) |
-| `MiniWorld API Description: Open API Search` | Open the API search panel |
-| `MiniWorld API Description: Refresh API Search Index` | Rescan declaration files to update search index |
+| `MiniWorld API Description: 添加 MiniWorld UGC 声明` | Select a version and set the completion mode automatically |
+| `MiniWorld API Description: 清除 MiniWorld UGC 补全` | Clear completion configuration |
+| `MiniWorld API Description: 打开 API 搜索` | Open the API search view |
+| `MiniWorld API Description: 刷新 API 搜索索引` | Refresh the API search index |
+| `MiniWorld API Description: 清空 ID 数据缓存` | Clear cached ID data and redownload it |
 
-## Compatibility
+### Settings
 
-| Project | Version |
+| Setting | Description |
 | :-: | :-: |
-| *Mini World* game | v1.56+ |
-| UGC SDK | 3.0 & 2.0 |
-| VS Code | ^1.125.0 |
+| `miniworld.completion` | Completion mode: `2.0`, `3.0`, or `off` |
+| `miniworld.serverUrl` | Server used to fetch ID data, default `desc.cmyk.dpdns.org` |
 
-## Notes
+### Requirements
 
-- This extension is designed for **UGC 3.0** & **UGC 2.0** only
-- Some APIs may differ from the actual game behavior; always refer to the game for the final word
-- For issues or feature requests, please open an [Issue](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues)
+- [VS Code](https://code.visualstudio.com/) ^1.125.0
+- [Lua Language Server (sumneko.lua)](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
 
-## License
+### Notes
+
+- This extension targets **UGC 2.0** and **UGC 3.0** only.
+- Some API behavior may differ from the actual game, so use the game as the final reference.
+- For bug reports or feature requests, please open an [Issue](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues).
+
+### License
 
 [MIT](https://github.com/LK-cmyk/MiniWorld-API-Desc/blob/main/LICENSE)
+
+---
 
 # MiniWorld API Description
 
@@ -93,86 +76,64 @@ When you open any `.lua` file, the extension automatically enables the correspon
 
 为《迷你世界》UGC 开发提供 Lua 类型声明、API 搜索和事件补全的 VS Code 扩展。
 
-## 功能
+## 中文
 
-### 📦 类型声明
+### 功能
 
-为 **UGC 3.0** & **UGC 2.0** 提供完整的 Lua 类型声明文件，配合 [Lua 语言服务（sumneko.lua）](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) 实现：
+#### 📦 类型声明
 
-- 智能自动补全
-- 类型提示与参数文档
-- 内联函数签名
+扩展为 **UGC 2.0** 和 **UGC 3.0** 提供 Lua 声明文件，并根据 `miniworld.completion` 自动同步对应版本到 Lua 语言服务。
 
-通过补全模式设置（见下方「⚡ 补全」），插件会自动将对应版本的声明加载到 Lua 语言服务；也可通过命令手动添加：
-
-| 命令 | 说明 |
-| :-: | :-: |
-| `MiniWorld API Description: 添加 MiniWorld UGC 声明` | 选择版本（2.0/3.0）后添加到 `Lua.workspace.library` |
-
-2.0 与 3.0 声明为互斥关系，切换补全模式会自动替换。
-
-### 🔍 API 搜索
-
-在 VS Code 侧边栏中直接搜索所有 MiniWorld API，无需离开编辑器翻阅文档。
-
-| 方式 | 操作 |
-| :-: | :-: |
-| **命令面板** | `Ctrl+Shift+P` → **MiniWorld API Description: 打开 API 搜索** |
-| **侧边栏按钮** | 点击左侧活动栏的 🔍 **MiniWorld API 搜索** 图标 |
-
-- **模糊搜索** — 输入关键词即可按名称、参数、描述进行模糊匹配（如 `GP` 匹配 `GetPosition`）
-- **筛选过滤** — 支持按版本（2.0 / 3.0）、模块、类型（函数 / 枚举 / 事件）筛选
-- **详情查看** — 点击结果查看完整的参数列表、返回值等
-- **点击跳转** — 点击结果条目跳转到声明源码位置
-- **快速清空** — 在搜索输入框中按 `Ctrl+K` 清空查询内容
-
-### ⚡ 补全
-
-通过设置项 **`miniworld.completion`** 控制整个扩展的补全能力（默认启用，基于 UGC 2.0）：
+`miniworld.completion` 控制补全模式：
 
 | 值 | 行为 |
 | :-: | :-: |
-| `2.0`（默认） | 自动加载 2.0 声明（API/类型补全），并在 `ScriptSupportEvent([=[...]=])` 长括号内补全 2.0 事件，选中后自动包裹 `[=[ ... ]=]` |
-| `3.0` | 自动加载 3.0 声明（API/类型补全），并在 `TriggerEvent.` / `ObjectEvent.` 之后补全 3.0 事件字段（枚举引用，无需长括号） |
-| `off` | 移除 MiniWorld 声明并关闭事件补全，即完全关闭补全（也可用「清除 MiniWorld UGC 补全」命令一键设置） |
+| `2.0` | 启用 UGC 2.0 声明补全和 2.0 事件补全 |
+| `3.0` | 启用 UGC 3.0 声明补全和 3.0 事件补全 |
+| `off` | 移除 MiniWorld 声明并关闭事件补全 |
 
-> 修改设置后无需重载窗口，扩展会自动切换声明并重新加载对应版本的事件定义。
->
-> - **自动同步**：扩展根据该配置项自动加载对应版本的声明，无需手动管理声明文件
-> - **切换确认**：检测到已启用其他版本补全（如设置为 `3.0` 但当前启用的是 `2.0`）时，会弹出提示框询问是否更换，确认后才执行切换；打开文件时则静默处理，不重复打扰
+默认值为 `2.0`。
 
-## 首次使用
+#### 🔍 API 搜索
 
-打开任意 `.lua` 文件时，插件会根据补全模式设置自动启用对应版本的声明（默认 2.0），无需手动配置即可获得补全。
+可从活动栏或命令面板打开 API 搜索视图，快速搜索函数、枚举、事件和参数信息。
 
-## 依赖要求
+- 支持按版本、模块、类型筛选
+- 支持点击跳转到声明位置
+- 可通过命令刷新索引
 
-- [VS Code](https://code.visualstudio.com/) ^1.125.0
-- [Lua 语言服务插件（sumneko.lua）](https://marketplace.visualstudio.com/items?itemName=sumneko.lua) — 自动作为依赖安装
+#### ⚡ 事件补全
 
-## 扩展命令
+扩展会在 `ScriptSupportEvent([=[...]=])` 等场景中提供相应版本事件补全，并在 `TriggerEvent.` / `ObjectEvent.` 后补全 3.0 事件字段。
+
+### 扩展命令
 
 | 命令 | 说明 |
 | :-: | :-: |
-| `MiniWorld API Description: 添加 MiniWorld UGC 声明` | 选择版本（2.0/3.0）后将声明目录添加到 `Lua.workspace.library` |
-| `MiniWorld API Description: 清除 MiniWorld UGC 补全` | 一键清除补全（将补全模式设为 `off`，移除声明并关闭事件补全） |
-| `MiniWorld API Description: 打开 API 搜索` | 打开 API 搜索面板 |
-| `MiniWorld API Description: 刷新 API 搜索索引` | 重新扫描声明文件，更新搜索索引 |
+| `MiniWorld API Description: 添加 MiniWorld UGC 声明` | 选择版本并自动设置补全模式 |
+| `MiniWorld API Description: 清除 MiniWorld UGC 补全` | 清除补全配置 |
+| `MiniWorld API Description: 打开 API 搜索` | 打开 API 搜索视图 |
+| `MiniWorld API Description: 刷新 API 搜索索引` | 刷新 API 搜索索引 |
+| `MiniWorld API Description: 清空 ID 数据缓存` | 清空 ID 缓存并重新下载 |
 
-## 兼容性
+### 设置项
 
-| 项目 | 版本 |
+| 设置项 | 说明 |
 | :-: | :-: |
-| 《迷你世界》游戏 | v1.56+ |
-| UGC 开发套件 | 3.0 & 2.0 |
-| VS Code | ^1.125.0 |
+| `miniworld.completion` | 补全模式：`2.0`、`3.0` 或 `off` |
+| `miniworld.serverUrl` | 下载 ID 数据的服务器地址，默认 `desc.cmyk.dpdns.org` |
 
-## 注意事项
+### 依赖要求
 
-- 本扩展仅面向 **UGC 3.0** & **UGC 2.0**
-- 部分接口可能与实际游戏版本存在差异，请以游戏实际行为为准
-- 如发现问题或需要补充 API，欢迎提交 [Issue](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues)
+- [VS Code](https://code.visualstudio.com/) ^1.125.0
+- [Lua 语言服务（sumneko.lua）](https://marketplace.visualstudio.com/items?itemName=sumneko.lua)
 
-## 许可
+### 注意事项
+
+- 本扩展仅面向 **UGC 2.0** 和 **UGC 3.0**。
+- 部分 API 行为可能与实际游戏存在差异，最终以游戏表现为准。
+- 如发现问题或需要补充 API，欢迎提交 [Issue](https://github.com/LK-cmyk/MiniWorld-API-Desc/issues)。
+
+### 许可
 
 [MIT](https://github.com/LK-cmyk/MiniWorld-API-Desc/blob/main/LICENSE)
